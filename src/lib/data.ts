@@ -10,11 +10,11 @@ const userAvatars = {
 }
 
 export const users: User[] = [
-  { id: 'user-1', name: 'Mark Maina', email: 'mark.maina@luna.co', role: 'admin', avatarUrl: userAvatars.mark },
-  { id: 'user-2', name: 'Mercy Mugati', email: 'mercy.mugati@luna.co', role: 'operations_manager', avatarUrl: userAvatars.mercy },
-  { id: 'user-3', name: 'Duncan Mwangi', email: 'duncan.mwangi@luna.co', role: 'production_personnel', avatarUrl: userAvatars.duncan },
-  { id: 'user-4', name: 'James Kimani', email: 'james.kimani@luna.co', role: 'production_personnel', avatarUrl: userAvatars.james },
-  { id: 'user-5', name: 'Maina Kinyua', email: 'maina.kinyua@luna.co', role: 'operations_manager', avatarUrl: userAvatars.maina },
+  { id: 'user-1', name: 'Mark Maina', email: 'mark.maina@luna.co.ke', role: 'admin', avatarUrl: userAvatars.mark },
+  { id: 'user-2', name: 'Mercy Mugati', email: 'mercy.mugati@luna.co.ke', role: 'operations_manager', avatarUrl: userAvatars.mercy },
+  { id: 'user-3', name: 'Duncan Mwangi', email: 'duncan.mwangi@luna.co.ke', role: 'production_personnel', avatarUrl: userAvatars.duncan },
+  { id: 'user-4', name: 'James Kimani', email: 'james.kimani@luna.co.ke', role: 'production_personnel', avatarUrl: userAvatars.james },
+  { id: 'user-5', name: 'Maina Kinyua', email: 'maina.kinyua@luna.co.ke', role: 'operations_manager', avatarUrl: userAvatars.maina },
 ];
 
 export let currentUser: User = users[1]; // Default to Mercy Mugati (Operations Manager)

@@ -35,7 +35,7 @@ import {
 
 export default function LoginPage() {
   const loginImage = PlaceHolderImages.find((img) => img.id === 'login-bg');
-  const [email, setEmail] = useState('manager@luna.co');
+  const [email, setEmail] = useState('mercy.mugati@luna.co.ke');
   const [password, setPassword] = useState('password123');
   const [showNoAccountDialog, setShowNoAccountDialog] = useState(false);
 
@@ -82,10 +82,16 @@ export default function LoginPage() {
         })
         return;
     }
-    // This is a mock login. In a real app, you'd handle auth state.
-    // For now, we'll just redirect based on the selected role.
-    // We'll also update a "currentUser" concept, though this is not secure.
-    // In a real app, this would be managed via session/auth context.
+
+    if (!email.endsWith('@luna.co.ke')) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Email",
+            description: "Please use your @luna.co.ke email address.",
+        })
+        return;
+    }
+
     const userToLogin = users.find(u => u.email === email);
     
     if (userToLogin) {
@@ -160,7 +166,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="manager@luna.co"
+                  placeholder="manager@luna.co.ke"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
