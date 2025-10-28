@@ -2,18 +2,22 @@ import type { User, RawMaterial, Product, MaterialRequest, Activity } from '@/li
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const userAvatars = {
-  admin: PlaceHolderImages.find(img => img.id === 'user-1')?.imageUrl || '',
-  manager: PlaceHolderImages.find(img => img.id === 'user-2')?.imageUrl || '',
-  production: PlaceHolderImages.find(img => img.id === 'user-3')?.imageUrl || '',
+  mark: PlaceHolderImages.find(img => img.id === 'user-1')?.imageUrl || '',
+  mercy: PlaceHolderImages.find(img => img.id === 'user-2')?.imageUrl || '',
+  duncan: PlaceHolderImages.find(img => img.id === 'user-3')?.imageUrl || '',
+  james: 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg',
+  maina: 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg',
 }
 
 export const users: User[] = [
-  { id: 'user-1', name: 'Admin Ali', email: 'admin@luna.co', role: 'admin', avatarUrl: userAvatars.admin },
-  { id: 'user-2', name: 'Zola Kenyatta', email: 'manager@luna.co', role: 'operations_manager', avatarUrl: userAvatars.manager },
-  { id: 'user-3', name: 'Baraka Odhiambo', email: 'production@luna.co', role: 'production_personnel', avatarUrl: userAvatars.production },
+  { id: 'user-1', name: 'Mark Maina', email: 'mark.maina@luna.co', role: 'admin', avatarUrl: userAvatars.mark },
+  { id: 'user-2', name: 'Mercy Mugati', email: 'mercy.mugati@luna.co', role: 'operations_manager', avatarUrl: userAvatars.mercy },
+  { id: 'user-3', name: 'Duncan Mwangi', email: 'duncan.mwangi@luna.co', role: 'production_personnel', avatarUrl: userAvatars.duncan },
+  { id: 'user-4', name: 'James Kimani', email: 'james.kimani@luna.co', role: 'production_personnel', avatarUrl: userAvatars.james },
+  { id: 'user-5', name: 'Maina Kinyua', email: 'maina.kinyua@luna.co', role: 'operations_manager', avatarUrl: userAvatars.maina },
 ];
 
-export let currentUser: User = users[1]; // Default to Operations Manager
+export let currentUser: User = users[1]; // Default to Mercy Mugati (Operations Manager)
 
 export function setCurrentUser(role: 'admin' | 'operations_manager' | 'production_personnel') {
     const newUser = users.find(u => u.role === role);
@@ -21,7 +25,6 @@ export function setCurrentUser(role: 'admin' | 'operations_manager' | 'productio
         currentUser = newUser;
     }
 }
-
 
 export const rawMaterials: RawMaterial[] = [
   { id: 'mat-1', name: 'Acacia Wood', sku: 'LUN-WD-ACA-01', quantity: 500, unit: 'kg', reorderPoint: 100 },
@@ -39,15 +42,37 @@ export const products: Product[] = [
 
 export const materialRequests: MaterialRequest[] = [
   { id: 'req-1', materialId: 'mat-1', quantity: 100, requestedBy: 'user-2', status: 'approved', createdAt: '2023-10-26T10:00:00Z', updatedAt: '2023-10-26T11:00:00Z' },
-  { id: 'req-2', materialId: 'mat-4', quantity: 20, requestedBy: 'user-2', status: 'pending', createdAt: '2023-10-27T14:30:00Z', updatedAt: '2023-10-27T14:30:00Z' },
+  { id: 'req-2', materialId: 'mat-4', quantity: 20, requestedBy: 'user-5', status: 'pending', createdAt: '2023-10-27T14:30:00Z', updatedAt: '2023-10-27T14:30:00Z' },
   { id: 'req-3', materialId: 'mat-2', quantity: 50, requestedBy: 'user-2', status: 'delivered', createdAt: '2023-10-25T09:00:00Z', updatedAt: '2023-10-26T15:00:00Z' },
-  { id: 'req-4', materialId: 'mat-5', quantity: 100, requestedBy: 'user-2', status: 'rejected', createdAt: '2023-10-24T16:00:00Z', updatedAt: '2023-10-24T17:00:00Z' },
+  { id: 'req-4', materialId: 'mat-5', quantity: 100, requestedBy: 'user-5', status: 'rejected', createdAt: '2023-10-24T16:00:00Z', updatedAt: '2023-10-24T17:00:00Z' },
+];
+
+const now = new Date();
+
+export const adminActivities: Activity[] = [
+    { id: 'act-adm-1', user: users[0], action: 'updated user roles for the production team.', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), details: 'Updated Duncan Mwangi to Production Lead' },
+    { id: 'act-adm-2', user: users[0], action: 'triggered a manual backup of the database.', timestamp: new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString(), details: 'Pre-update safety backup' },
+    { id: 'act-adm-3', user: users[0], action: 'reset the password for Maina Kinyua.', timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), details: 'User requested reset via ICT support' },
+    { id: 'act-adm-4', user: users[0], action: 'deactivated a user account.', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), details: 'User account for former employee "Jane Doe" deactivated.' },
+];
+
+export const operationsActivities: Activity[] = [
+  { id: 'act-ops-1', user: users[1], action: 'approved a material request for 20 liters of Natural Dyes.', timestamp: new Date(now.getTime() - 15 * 60 * 1000).toISOString(), details: 'Request #req-2 by Maina Kinyua' },
+  { id: 'act-ops-2', user: users[4], action: 'uploaded delivery note for PO-0451.', timestamp: new Date(now.getTime() - 45 * 60 * 1000).toISOString(), details: 'Received 100kg of Acacia Wood' },
+  { id: 'act-ops-3', user: users[1], action: 'updated the reorder point for Recycled Brass.', timestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString(), details: 'Changed from 50kg to 75kg' },
+  { id: 'act-ops-4', user: users[4], action: 'rejected a material request for 200 units of Kenyan Leather.', timestamp: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString(), details: 'Reason: Duplicate request.' },
+  { id: 'act-ops-5', user: users[1], action: 'marked a delivery as complete.', timestamp: new Date(now.getTime() - 28 * 60 * 60 * 1000).toISOString(), details: '50kg Recycled Brass from supplier' },
+];
+
+export const productionActivities: Activity[] = [
+    { id: 'act-prod-1', user: users[2], action: 'reported a production run of 50 Handcarved Bowls.', timestamp: new Date(now.getTime() - 30 * 60 * 1000).toISOString(), details: 'Used 25kg of Acacia Wood' },
+    { id: 'act-prod-2', user: users[3], action: 'logged the usage of 15kg of Recycled Brass.', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), details: 'For production of 150 Brass Earrings sets' },
+    { id: 'act-prod-3', user: users[2], action: 'submitted a quality control check.', timestamp: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(), details: 'Batch #PROD-BWL-01-B passed inspection' },
+    { id: 'act-prod-4', user: users[3], action: 'reported a material discrepancy for Natural Dyes.', timestamp: new Date(now.getTime() - 7 * 60 * 60 * 1000).toISOString(), details: 'Used 5.5L instead of expected 5L' },
 ];
 
 export const activities: Activity[] = [
-  { id: 'act-1', user: { name: 'Zola Kenyatta', avatarUrl: userAvatars.manager }, action: 'Requested Material', details: '100 kg of Acacia Wood', timestamp: '3 hours ago' },
-  { id: 'act-2', user: { name: 'Baraka Odhiambo', avatarUrl: userAvatars.production }, action: 'Production Logged', details: 'Used 10kg Recycled Brass for Brass Earrings', timestamp: '8 hours ago' },
-  { id: 'act-3', user: { name: 'System', avatarUrl: '' }, action: 'Inventory Alert', details: 'Natural Dyes are below reorder point', timestamp: '1 day ago' },
-  { id: 'act-4', user: { name: 'Zola Kenyatta', avatarUrl: userAvatars.manager }, action: 'Verified Delivery', details: '50 units of Kenyan Leather', timestamp: '2 days ago' },
-  { id: 'act-5', user: { name: 'Admin Ali', avatarUrl: userAvatars.admin }, action: 'User Update', details: 'Changed role for new employee', timestamp: '4 days ago' },
-];
+  ...adminActivities,
+  ...operationsActivities,
+  ...productionActivities,
+].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

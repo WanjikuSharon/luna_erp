@@ -16,10 +16,11 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { users } from '@/lib/data';
-import type { User } from '@/lib/types';
-import { MoreHorizontal, User as UserIcon, Activity, AlertTriangle } from 'lucide-react';
+import { users, adminActivities } from '@/lib/data';
+import type { User, Activity } from '@/lib/types';
+import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatDistanceToNow } from 'date-fns';
 
 const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
@@ -38,7 +39,7 @@ export default function AdminDashboardPage() {
             </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -52,7 +53,7 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">System Activities</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <ActivityIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">1,204</div>
@@ -69,56 +70,92 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-muted-foreground">require immediate attention</p>
             </CardContent>
           </Card>
-        </div>
-
-
-        <Card>
-            <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                    Overview of all users in the system.
-                </CardDescription>
+           <Card>
+            <CardHeader className="flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Security Events</CardTitle>
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {users.map((user: User) => (
-                    <TableRow key={user.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                                <AvatarImage src={newLogoUrl} alt={user.name} />
-                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{user.name}</span>
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                        <Badge variant={roleConfig[user.role].variant}>
-                            {roleConfig[user.role].label}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">User actions</span>
-                        </Button>
-                    </TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
+              <div className="text-2xl font-bold">5</div>
+              <p className="text-xs text-muted-foreground">in the last 7 days</p>
             </CardContent>
-        </Card>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>
+                        Overview of all users in the system.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {users.map((user: User) => (
+                        <TableRow key={user.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9">
+                                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{user.name}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell>
+                            <Badge variant={roleConfig[user.role].variant}>
+                                {roleConfig[user.role].label}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">User actions</span>
+                            </Button>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                <CardTitle>System Audit Log</CardTitle>
+                <CardDescription>Recent high-level system and user activities.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {adminActivities.map((activity: Activity) => (
+                        <div key={activity.id} className="flex items-start gap-4">
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
+                                <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="text-sm">
+                                <p className="font-medium">
+                                    {activity.user.name}{' '}
+                                    <span className="text-muted-foreground font-normal">{activity.action.toLowerCase()}</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }

@@ -5,27 +5,17 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { currentUser, rawMaterials, materialRequests, activities } from '@/lib/data';
+import { operationsActivities, rawMaterials } from '@/lib/data';
 import { DollarSign, Warehouse, Package, Truck } from 'lucide-react';
 import type { Activity } from '@/lib/types';
+import { format } from 'date-fns';
 
 export default function OperationsDashboardPage() {
-  const pendingRequests = materialRequests.filter(r => r.status === 'pending').length;
   const lowStockItems = rawMaterials.filter(m => m.quantity < m.reorderPoint).length;
   const inventoryValue = rawMaterials.reduce((acc, item) => acc + item.quantity * 5, 0); // Dummy price
-  const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,7 +55,7 @@ export default function OperationsDashboardPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{pendingRequests}</div>
+            <div className="text-2xl font-bold">+5</div>
             <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
@@ -83,43 +73,29 @@ export default function OperationsDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Operations Log</CardTitle>
+          <CardDescription>A log of recent inventory and request activities.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead className="text-right">Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activities.map((activity: Activity) => (
-                <TableRow key={activity.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={newLogoUrl} />
-                        <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{activity.user.name}</span>
+            <div className="space-y-6">
+                {operationsActivities.map((activity: Activity) => (
+                    <div key={activity.id} className="flex items-start gap-4">
+                        <Avatar className="h-9 w-9 border">
+                            <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
+                            <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="text-sm">
+                            <p className="font-medium text-muted-foreground">
+                                <span className="font-semibold text-foreground">{activity.user.name}</span>
+                                {' '}{activity.action}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a")}
+                            </p>
+                        </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={activity.action.includes('Alert') ? 'destructive' : 'secondary'}>
-                      {activity.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{activity.details}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {activity.timestamp}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                ))}
+            </div>
         </CardContent>
       </Card>
     </div>
