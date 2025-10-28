@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "RawMaterial": {
+      "title": "Raw Material",
+      "type": "object",
+      "description": "Represents a raw material used in production.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the material." },
+        "sku": { "type": "string", "description": "Stock Keeping Unit." },
+        "quantity": { "type": "number", "description": "Current quantity in stock." },
+        "unit": { "type": "string", "description": "Unit of measurement (e.g., kg, liters, units)." },
+        "reorderPoint": { "type": "number", "description": "The stock level at which to reorder." }
+      },
+      "required": ["name", "sku", "quantity", "unit", "reorderPoint"]
+    },
+    "Product": {
+        "title": "Product",
+        "type": "object",
+        "description": "Represents a finished product for sale.",
+        "properties": {
+            "name": { "type": "string", "description": "The name of the product." },
+            "sku": { "type": "string", "description": "Stock Keeping Unit." },
+            "quantity": { "type": "number", "description": "Current quantity in stock." },
+            "unit": { "type": "string", "description": "Unit of measurement (e.g., units)." }
+        },
+        "required": ["name", "sku", "quantity", "unit"]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user (e.g., Admin, Operations Manager, Production)."
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "role"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+     "structure": [
+        {
+            "path": "/raw_materials/{materialId}",
+            "definition": {
+                "entityName": "RawMaterial",
+                "schema": { "$ref": "#/backend/entities/RawMaterial" },
+                "description": "Stores all raw materials. Accessible to operations managers and admins."
+            }
+        },
+        {
+            "path": "/products/{productId}",
+            "definition": {
+                "entityName": "Product",
+                "schema": { "$ref": "#/backend/entities/Product" },
+                "description": "Stores all finished products. Accessible to operations managers and admins."
+            }
+        },
+        {
+            "path": "/users/{userId}",
+            "definition": {
+                "entityName": "User",
+                "schema": {
+                    "$ref": "#/backend/entities/User"
+                },
+                "description": "Stores user profiles. Only the user and admins can read/write their own profile data."
+            }
+        }
+    ]
+  }
+}
