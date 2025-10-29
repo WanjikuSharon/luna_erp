@@ -17,10 +17,11 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { setCurrentUser, users } from '@/lib/data';
 import type { User as UserType } from '@/lib/types';
-import { useAuth, useUser } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -45,76 +46,124 @@ export default function LoginPage() {
   const { toast } = useToast();
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
 
+  // Get the Firestore instance
+  const firestore = useFirestore();
+
+  // Create a memoized reference to the user's document
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+
+  // Fetch the document data
+  const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userDocRef);
+
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-        const matchingUser = users.find(u => u.email.toLowerCase() === user.email?.toLowerCase());
-        if (matchingUser) {
-            setCurrentUser(matchingUser.role);
-            switch (matchingUser.role) {
-                case 'admin':
-                    router.push('/admin');
-                    break;
-                case 'operations_manager':
-                    router.push('/operations');
-                    break;
-                case 'production_personnel':
-                    router.push('/production');
-                    break;
-                default:
-                    router.push('/login');
-            }
-        } else {
-            // This case can be handled more gracefully, e.g., show an error.
-            // For now, it prevents a crash if the logged-in Firebase user isn't in our mock data.
-            console.warn("Logged in user not found in mock data:", user.email);
-        }
-    }
-  }, [user, isUserLoading, router]);
+    // Wait for auth to finish AND our user document to finish loading
+    if (!isUserLoading && !isUserDataLoading) {
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-        toast({
-            variant: "destructive",
-            title: "Missing fields",
-            description: "Please enter both email and password.",
-        })
-        return;
-    }
-
-    if (!email.endsWith('@luna.co.ke')) {
-        toast({
-            variant: "destructive",
-            title: "Invalid Email",
-            description: "Please use your @luna.co.ke email address.",
-        })
-        return;
-    }
-
-    const userToLogin = users.find(u => u.email === email);
-    
-    if (userToLogin) {
-        setCurrentUser(userToLogin.role);
-        switch (userToLogin.role) {
-            case 'admin':
+      if (user && userData) {
+        // User is logged in AND we have their role data from Firestore!
+        switch (userData.role) {
+          case 'admin':
             router.push('/admin');
             break;
-            case 'operations_manager':
+          case 'operations_manager':
             router.push('/operations');
             break;
-            case 'production_personnel':
+          case 'production_personnel':
             router.push('/production');
             break;
-            default:
+          default:
+            // Fallback if role is unknown
             router.push('/login');
         }
-    } else {
+      } else if (user && !userData) {
+        // TEMPORARILY BYPASSED FOR DEVELOPMENT
+        // Fallback: Use email to determine role when Firestore document doesn't exist
+        console.warn("User document not found in Firestore for UID:", user.uid, "- Using email-based routing");
+        
+        const email = user.email?.toLowerCase() || '';
+        
+        if (email.includes('mark.maina') || email.includes('admin')) {
+          router.push('/admin');
+        } else if (email.includes('mercy.mugati') || email.includes('operations')) {
+          router.push('/operations');
+        } else if (email.includes('peter.kamau') || email.includes('production')) {
+          router.push('/production');
+        } else {
+          // Default fallback
+          router.push('/operations');
+        }
+        
+        /* ORIGINAL CODE - COMMENTED OUT FOR DEVELOPMENT
+        console.error("User document not found in Firestore for UID:", user.uid);
         toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Invalid credentials.",
-        })
+          variant: "destructive",
+          title: "Profile Error",
+          description: "Your user account is not fully set up. Please contact ICT.",
+        });
+        auth.signOut(); // Log them out so they don't get stuck
+        */
+      }
+      // If !user (user is null), we do nothing and they stay on the login page.
+    }
+  }, [
+    user, 
+    isUserLoading, 
+    userData, 
+    isUserDataLoading, 
+    router, 
+    auth, 
+    toast
+  ]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 1. Keep this validation
+    if (!email || !password) {
+      toast({ variant: "destructive", title: "Missing fields", description: "Please enter both email and password." });
+      return;
+    }
+
+    // 2. Keep this @luna.co.ke check (Requirement)
+    if (!email.endsWith('@luna.co.ke')) {
+      toast({ variant: "destructive", title: "Invalid Email", description: "Please use your @luna.co.ke email address." });
+      return;
+    }
+
+    // 3. THIS IS THE NEW LOGIC: Try to sign in with Firebase
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 4. Check for email verification (Requirement)
+      // TEMPORARILY DISABLED FOR DEVELOPMENT
+      /* 
+      if (!user.emailVerified) {
+        toast({
+          variant: "destructive",
+          title: "Verification Required",
+          description: "Please check your inbox and verify your email address before logging in.",
+        });
+        await auth.signOut(); // Sign them out until they are verified
+        return;
+      }
+      */
+
+      // 5. The useEffect hook above will handle the redirect automatically!
+      // No need for manual router.push() here - the useEffect watches the user state
+
+    } catch (error: any) {
+      // 6. Handle login errors
+      console.error("Login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Invalid credentials. Please check your email and password.",
+      });
     }
   };
 

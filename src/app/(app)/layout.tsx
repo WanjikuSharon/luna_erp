@@ -39,6 +39,7 @@ const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin' },
   { href: '/operations', icon: Group, label: 'Operations' },
   { href: '/production', icon: Factory, label: 'Production' },
+  { href: '/requests', icon: ClipboardList, label: 'Requests' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -67,11 +68,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NavigationMenuList>
               {filteredNavItems.map((item) => (
                  <NavigationMenuItem key={item.href}>
-                    <Link href={item.href} legacyBehavior passHref>
-                        <NavigationMenuLink active={pathname.startsWith(item.href)} className={navigationMenuTriggerStyle()}>
+                    <NavigationMenuLink asChild active={pathname.startsWith(item.href)} className={navigationMenuTriggerStyle()}>
+                        <Link href={item.href}>
                             {item.label}
-                        </NavigationMenuLink>
-                    </Link>
+                        </Link>
+                    </NavigationMenuLink>
                  </NavigationMenuItem>
               ))}
             </NavigationMenuList>

@@ -39,6 +39,10 @@
           "type": "string",
           "description": "Username of the user."
         },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
@@ -47,14 +51,49 @@
         "role": {
           "type": "string",
           "description": "Role of the user (e.g., Admin, Operations Manager, Production)."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "format": "url",
+          "description": "URL of the user's avatar image."
+        },
+        "notificationSettings": {
+          "type": "object",
+          "description": "User preferences for receiving notifications.",
+          "properties": {
+            "receiveEmails": {
+              "type": "boolean",
+              "description": "Enable/disable email notifications.",
+              "default": true
+            },
+            "reportFrequency": {
+              "type": "string",
+              "description": "Frequency for receiving summary reports.",
+              "enum": ["daily", "weekly", "never"],
+              "default": "daily"
+            }
+          },
+          "required": ["receiveEmails", "reportFrequency"]
         }
       },
       "required": [
-        "id",
-        "username",
+        "name",
         "email",
         "role"
       ]
+    },
+    "PackagingMaterial": {
+        "title": "Packaging Material",
+        "type": "object",
+        "description": "Represents packaging materials like bottles or stickers.",
+        "properties": {
+            "name": { "type": "string", "description": "The name of the packaging material." },
+            "sku": { "type": "string", "description": "Stock Keeping Unit." },
+            "quantity": { "type": "number", "description": "Current quantity in stock." },
+            "unit": { "type": "string", "enum": ["units", "rolls"], "description": "Unit of measurement." },
+            "reorderPoint": { "type": "number", "description": "The stock level at which to reorder." }
+        },
+        "required": ["name", "sku", "quantity", "unit", "reorderPoint"]
     }
   },
   "auth": {
@@ -89,6 +128,34 @@
                     "$ref": "#/backend/entities/User"
                 },
                 "description": "Stores user profiles. Only the user and admins can read/write their own profile data."
+            }
+        },
+        {
+            "path": "/packaging_materials/{packagingId}",
+            "definition": {
+                "entityName": "PackagingMaterial",
+                "schema": { "$ref": "#/entities/PackagingMaterial" },
+                "description": "Stores packaging materials."
+            }
+        },
+        {
+            "path": "/material_requests/{requestId}",
+            "definition": {
+                "entityName": "MaterialRequestWithVendor",
+                "description": "Stores inventory requests sent to vendors.",
+                 "schema": {
+                    "type": "object",
+                    "properties": {
+                        "materialId": { "type": "string" },
+                        "quantity": { "type": "number" },
+                        "requestedBy": { "type": "string", "description": "Firebase Auth UID" },
+                        "status": { "type": "string", "enum": ["pending", "approved", "delivered", "rejected"] },
+                        "vendorId": { "type": "string" },
+                        "createdAt": { "type": "object", "description": "Firestore Timestamp" },
+                        "updatedAt": { "type": "object", "description": "Firestore Timestamp" }
+                    },
+                    "required": ["materialId", "quantity", "requestedBy", "status", "vendorId", "createdAt", "updatedAt"]
+                }
             }
         }
     ]
