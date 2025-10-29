@@ -8,14 +8,30 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { operationsActivities, rawMaterials } from '@/lib/data';
 import { DollarSign, Warehouse, Package, Truck } from 'lucide-react';
-import type { Activity } from '@/lib/types';
+import type { Activity, RawMaterial } from '@/lib/types';
 import { format } from 'date-fns';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OperationsDashboardPage() {
-  const lowStockItems = rawMaterials.filter(m => m.quantity < m.reorderPoint).length;
-  const inventoryValue = rawMaterials.reduce((acc, item) => acc + item.quantity * 5, 0); // Dummy price
+  const firestore = useFirestore();
+
+  // Memoize collection references
+  const rawMaterialsRef = useMemoFirebase(() => collection(firestore, 'rawMaterials'), [firestore]);
+  const operationsActivitiesRef = useMemoFirebase(() => collection(firestore, 'operationsActivities'), [firestore]);
+
+  // Fetch data from Firestore
+  const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
+  const { data: operationsActivities, isLoading: isLoadingActivities } = useCollection<Activity>(operationsActivitiesRef);
+
+  const isLoading = isLoadingMaterials || isLoadingActivities;
+
+  // Calculate metrics from real data
+  const lowStockItems = rawMaterials?.filter(m => m.quantity < m.reorderPoint).length ?? 0;
+  const inventoryValue = rawMaterials?.reduce((acc, item) => acc + item.quantity * 5, 0) ?? 0; // Dummy price
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +50,7 @@ export default function OperationsDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${inventoryValue.toLocaleString()}
+              {isLoadingMaterials ? '...' : `$${inventoryValue.toLocaleString()}`}
             </div>
             <p className="text-xs text-muted-foreground">+2.1% from last month</p>
           </CardContent>
@@ -45,7 +61,7 @@ export default function OperationsDashboardPage() {
             <Warehouse className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{lowStockItems}</div>
+            <div className="text-2xl font-bold">{isLoadingMaterials ? '...' : lowStockItems}</div>
             <p className="text-xs text-muted-foreground">Items needing reorder</p>
           </CardContent>
         </Card>
@@ -77,25 +93,36 @@ export default function OperationsDashboardPage() {
           <CardDescription>A log of recent inventory and request activities.</CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="space-y-6">
-                {operationsActivities.map((activity: Activity) => (
-                    <div key={activity.id} className="flex items-start gap-4">
-                        <Avatar className="h-9 w-9 border">
-                            <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
-                            <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-sm">
-                            <p className="font-medium text-muted-foreground">
-                                <span className="font-semibold text-foreground">{activity.user.name}</span>
-                                {' '}{activity.action}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a")}
-                            </p>
+            {isLoadingActivities ? (
+                <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            ) : (operationsActivities && operationsActivities.length > 0) ? (
+                <div className="space-y-6">
+                    {(operationsActivities ?? []).map((activity: Activity) => (
+                        <div key={activity.id} className="flex items-start gap-4">
+                            <Avatar className="h-9 w-9 border">
+                                <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
+                                <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="text-sm">
+                                <p className="font-medium text-muted-foreground">
+                                    <span className="font-semibold text-foreground">{activity.user.name}</span>
+                                    {' '}{activity.action}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a")}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-muted-foreground">No operations activities yet. Activities will appear here as users interact with inventory and requests.</p>
+            )}
         </CardContent>
       </Card>
     </div>
