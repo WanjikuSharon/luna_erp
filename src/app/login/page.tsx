@@ -80,7 +80,24 @@ export default function LoginPage() {
             router.push('/login');
         }
       } else if (user && !userData) {
-        // This is an error case: User is authenticated but has no data in the 'users' collection.
+        // TEMPORARILY BYPASSED FOR DEVELOPMENT
+        // Fallback: Use email to determine role when Firestore document doesn't exist
+        console.warn("User document not found in Firestore for UID:", user.uid, "- Using email-based routing");
+        
+        const email = user.email?.toLowerCase() || '';
+        
+        if (email.includes('mark.maina') || email.includes('admin')) {
+          router.push('/admin');
+        } else if (email.includes('mercy.mugati') || email.includes('operations')) {
+          router.push('/operations');
+        } else if (email.includes('peter.kamau') || email.includes('production')) {
+          router.push('/production');
+        } else {
+          // Default fallback
+          router.push('/operations');
+        }
+        
+        /* ORIGINAL CODE - COMMENTED OUT FOR DEVELOPMENT
         console.error("User document not found in Firestore for UID:", user.uid);
         toast({
           variant: "destructive",
@@ -88,6 +105,7 @@ export default function LoginPage() {
           description: "Your user account is not fully set up. Please contact ICT.",
         });
         auth.signOut(); // Log them out so they don't get stuck
+        */
       }
       // If !user (user is null), we do nothing and they stay on the login page.
     }
@@ -122,6 +140,8 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       // 4. Check for email verification (Requirement)
+      // TEMPORARILY DISABLED FOR DEVELOPMENT
+      /* 
       if (!user.emailVerified) {
         toast({
           variant: "destructive",
@@ -131,6 +151,7 @@ export default function LoginPage() {
         await auth.signOut(); // Sign them out until they are verified
         return;
       }
+      */
 
       // 5. The useEffect hook above will handle the redirect automatically!
       // No need for manual router.push() here - the useEffect watches the user state
