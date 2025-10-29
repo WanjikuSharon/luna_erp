@@ -17,11 +17,11 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { setCurrentUser, users } from '@/lib/data';
 import type { User as UserType } from '@/lib/types';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -46,32 +46,60 @@ export default function LoginPage() {
   const { toast } = useToast();
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
 
+  // Get the Firestore instance
+  const firestore = useFirestore();
+
+  // Create a memoized reference to the user's document
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+
+  // Fetch the document data
+  const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userDocRef);
+
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-        const matchingUser = users.find(u => u.email.toLowerCase() === user.email?.toLowerCase());
-        if (matchingUser) {
-            setCurrentUser(matchingUser.role);
-            switch (matchingUser.role) {
-                case 'admin':
-                    router.push('/admin');
-                    break;
-                case 'operations_manager':
-                    router.push('/operations');
-                    break;
-                case 'production_personnel':
-                    router.push('/production');
-                    break;
-                default:
-                    router.push('/login');
-            }
-        } else {
-            // This case can be handled more gracefully, e.g., show an error.
-            // For now, it prevents a crash if the logged-in Firebase user isn't in our mock data.
-            console.warn("Logged in user not found in mock data:", user.email);
+    // Wait for auth to finish AND our user document to finish loading
+    if (!isUserLoading && !isUserDataLoading) {
+
+      if (user && userData) {
+        // User is logged in AND we have their role data from Firestore!
+        switch (userData.role) {
+          case 'admin':
+            router.push('/admin');
+            break;
+          case 'operations_manager':
+            router.push('/operations');
+            break;
+          case 'production_personnel':
+            router.push('/production');
+            break;
+          default:
+            // Fallback if role is unknown
+            router.push('/login');
         }
+      } else if (user && !userData) {
+        // This is an error case: User is authenticated but has no data in the 'users' collection.
+        console.error("User document not found in Firestore for UID:", user.uid);
+        toast({
+          variant: "destructive",
+          title: "Profile Error",
+          description: "Your user account is not fully set up. Please contact ICT.",
+        });
+        auth.signOut(); // Log them out so they don't get stuck
+      }
+      // If !user (user is null), we do nothing and they stay on the login page.
     }
-  }, [user, isUserLoading, router]);
+  }, [
+    user, 
+    isUserLoading, 
+    userData, 
+    isUserDataLoading, 
+    router, 
+    auth, 
+    toast
+  ]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
