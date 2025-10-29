@@ -249,5 +249,20 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
+
+    /**
+     * @description Controls access to material requests.
+     * @path /material_requests/{requestId}
+     * @allow read, write: Authenticated users can access.
+     * @principle Allows authenticated access to material requests.
+     */
+    match /material_requests/{requestId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
   }
 }
