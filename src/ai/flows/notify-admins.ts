@@ -1,8 +1,8 @@
 // src/ai/flows/notify-admins.ts
 'use server';
 
-import { defineFlow } from 'genkit';
-import { z } from 'genkit/zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { initializeFirebase } from '@/firebase'; // Use your existing init
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { sendEmail } from '@/services/email_service'; // Import the email service
@@ -15,13 +15,13 @@ const NotifyAdminsInputSchema = z.object({
   body: z.string().describe('The HTML body content of the notification email.'),
 });
 
-export const notifyAdmins = defineFlow(
+const notifyAdminsFlow = ai.defineFlow(
   {
     name: 'notifyAdmins',
     inputSchema: NotifyAdminsInputSchema,
     outputSchema: z.object({ success: z.boolean(), notifiedCount: z.number() }),
   },
-  async (input) => {
+  async input => {
     console.log('notifyAdmins flow started with input:', input);
     const { firestore } = initializeFirebase(); // Get Firestore instance
     const recipients: { email_address: { address: string; name?: string } }[] = [];
@@ -83,3 +83,9 @@ export const notifyAdmins = defineFlow(
     }
   }
 );
+
+export async function notifyAdmins(
+  input: z.infer<typeof NotifyAdminsInputSchema>
+): Promise<{ success: boolean; notifiedCount: number }> {
+  return notifyAdminsFlow(input);
+}
