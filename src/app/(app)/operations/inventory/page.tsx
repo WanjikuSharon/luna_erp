@@ -60,6 +60,7 @@ import type { RawMaterial } from '@/lib/types';
 import { users } from '@/lib/data'; // Still using mock users for names
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { sendRequestEmail } from '@/ai/flows/send-request-email';
 
 // Define a type for the updated Material Request structure including vendor
 export type MaterialRequestWithVendor = {
@@ -196,24 +197,65 @@ export default function InventoryRequestPage() {
     //   return;
     // }
 
+    // Find user and material names for the email
+    const requester = users.find(u => u.id === currentUserId); // Still using mock users array for names
+    const material = rawMaterials?.find(m => m.id === data.materialId);
+    const vendor = vendors.find(v => v.id === data.vendorId);
+
+    if (!requester || !material || !vendor) {
+        toast({ variant: "destructive", title: "Data Error", description: "Could not find user, material, or vendor details." });
+        return;
+    }
+
+    let newRequestId: string | null = null; // Variable to store the new request ID
+
     try {
-      await addDoc(collection(firestore, 'material_requests'), {
+      // Save to Firestore
+      const docRef = await addDoc(collection(firestore, 'material_requests'), {
         materialId: data.materialId,
         quantity: data.quantity,
         vendorId: data.vendorId, // NEW: Save vendorId
         requestedBy: currentUserId, // Use real UID or fake ID
-        status: 'pending',
+        status: 'pending' as const, // Ensure type safety
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      toast({ title: "Request Submitted", description: "Your material request has been logged." });
+      newRequestId = docRef.id; // Get the ID of the newly created document
+
+      toast({ title: "Request Submitted", description: "Inventory request logged successfully." });
       form.reset();
       setIsDialogOpen(false);
 
+      // --- NEW: Trigger the email flow ---
+      console.log("Calling sendRequestEmail flow for ID:", newRequestId);
+      // Construct the URL (adjust base URL if needed)
+      const requestUrl = `${window.location.origin}/operations/inventory?requestId=${newRequestId}`;
+
+      sendRequestEmail({
+          requestId: newRequestId,
+          materialName: material.name,
+          quantity: data.quantity,
+          requesterName: requester.name,
+          vendorName: vendor.name,
+          requestUrl: requestUrl, // Optional: Link back to the request
+      }).then((result: { success: boolean }) => {
+          if (result.success) {
+              console.log("Admin notification email process initiated successfully.");
+          } else {
+              console.error("Admin notification email process failed.");
+              // Optional: Show a less critical toast here?
+          }
+      }).catch((flowError: Error) => {
+          console.error("Error invoking sendRequestEmail flow:", flowError);
+          // Optional: Show a toast about notification failure
+      });
+      // Note: We don't await the flow call here - it runs in the background.
+
     } catch (error) {
       console.error("Error submitting request:", error);
-      toast({ variant: "destructive", title: "Submission Failed", description: "Could not save request." });
+      toast({ variant: "destructive", title: "Submission Failed", description: "Could not save your request." });
+      // Don't try to send email if saving failed
     }
   }
 
