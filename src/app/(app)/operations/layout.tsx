@@ -11,17 +11,17 @@ import { cn } from '@/lib/utils';
 const sidebarNavItems = [
   {
     title: 'Overview',
-    href: '/operations', // The main dashboard page
+    href: '/operations/overview', // Changed from '/operations'
     icon: LayoutDashboard,
   },
   {
-    title: 'Inventory Requests', // Renamed from "Requests" as requested
-    href: '/operations/inventory', // New sub-page for requests
-    icon: ClipboardList,
+    title: 'Vendors & Materials', // <<< CHANGED TITLE HERE
+    href: '/operations/inventory',
+    icon: ClipboardList, // Icon is fine, represents inventory/lists
   },
   {
     title: 'Reconciliation',
-    href: '/operations/reconciliation', // New sub-page for reconciliation
+    href: '/operations/reconciliation',
     icon: Recycle,
   },
 ];
