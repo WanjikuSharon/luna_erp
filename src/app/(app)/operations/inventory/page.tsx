@@ -1,11 +1,13 @@
 // src/app/(app)/operations/inventory/page.tsx
 'use client';
 
+// Basic React/Next imports
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
+// Shadcn UI Components
 import {
   Card,
   CardContent,
@@ -23,10 +25,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { FilePlus2, CheckCircle, XCircle, Clock, Truck, Loader2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-
+import { Badge } from '@/components/ui/badge'; // Keep for Raw Materials status
 import {
   Dialog,
   DialogContent,
@@ -53,321 +52,214 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
+// Icons
+import { PlusCircle, Search, Edit, Trash2, Loader2 } from 'lucide-react';
+
+// Firebase & Data
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { RawMaterial } from '@/lib/types';
-import { users } from '@/lib/data'; // Still using mock users for names
-import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
-import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import type { RawMaterial } from '@/lib/types'; // Keep RawMaterial type
+import { COLLECTIONS } from '@/services/inventory_service'; // Use centralized collection names
 
-// Define a type for the updated Material Request structure including vendor
-export type MaterialRequestWithVendor = {
-  id: string; // Added by useCollection
-  materialId: string;
-  quantity: number;
-  requestedBy: string; // Should be Firebase UID
-  status: 'pending' | 'approved' | 'delivered' | 'rejected';
-  vendorId: string; // NEW: Added vendor ID
-  createdAt: any; // Use 'any' for Firestore Timestamp compatibility for now
-  updatedAt: any;
+// NEW: Define Vendor type (add to src/lib/types.ts later if needed)
+type Vendor = {
+    id: string; // Will come from Firestore doc ID
+    name: string;
+    email: string;
+    // Add other fields like phone, address later
 };
 
-const statusConfig = {
-  pending: { label: 'Pending', icon: Clock, color: 'bg-amber-500' },
-  approved: { label: 'Approved', icon: CheckCircle, color: 'bg-sky-500' },
-  delivered: { label: 'Delivered', icon: Truck, color: 'bg-green-500' },
-  rejected: { label: 'Rejected', icon: XCircle, color: 'bg-red-500' },
-};
-
-// NEW: Add vendorId to the form schema
+// --- Form Schema for the "New Delivery Request" Dialog ---
+// NEW: Add 'unit' field based on screenshot
 const requestFormSchema = z.object({
   materialId: z.string().min(1, 'Please select a material.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be positive.'),
-  vendorId: z.string().min(1, 'Please select a vendor.'), // NEW
+  unit: z.string().min(1, 'Please select units.'), // NEW
+  vendorId: z.string().min(1, 'Please select a vendor.'),
 });
 type RequestFormValues = z.infer<typeof requestFormSchema>;
 
-// NEW: Placeholder for vendor data (replace with Firestore fetch later)
-const vendors = [
-    { id: 'vendor-1', name: 'Kenya Craft Supplies' },
-    { id: 'vendor-2', name: 'East Africa Metals Ltd.' },
-    { id: 'vendor-3', name: 'Nairobi Textiles Co.' },
+// --- Mock Data (Replace with Firestore later) ---
+// NEW: Mock Vendors List
+const MOCK_VENDORS: Vendor[] = [
+    { id: 'v1', name: 'Tech Supplies Inc.', email: 'techsupplies@example.com' },
+    { id: 'v2', name: 'Global Materials Co.', email: 'globalmaterials@example.com' },
+    { id: 'v3', name: 'Quality Components Ltd.', email: 'qualityparts@example.com' },
+    { id: 'v4', name: 'Industrial Solutions LLC', email: 'industrialsolutions@example.com' },
+    { id: 'v5', name: 'Precision Parts Corp.', email: 'precisionparts@example.com' },
 ];
 
-// Updated RequestRow component
-function RequestRow({ request, materialNameMap, vendorNameMap }: {
-  request: MaterialRequestWithVendor,
-  materialNameMap: Record<string, string>,
-  vendorNameMap: Record<string, string> // NEW: Pass vendor names
-}) {
-  const requester = users.find(u => u.id === request.requestedBy); // Still mock users
-  const status = statusConfig[request.status];
-
-  return (
-    <TableRow>
-      <TableCell>
-        <div className="font-medium">{materialNameMap[request.materialId] || 'Unknown Material'}</div>
-        <div className="text-xs text-muted-foreground">{request.materialId}</div>
-      </TableCell>
-      <TableCell className="text-center">{request.quantity}</TableCell>
-      <TableCell>
-        <Badge variant="secondary" className="font-normal">
-          <status.icon className="mr-2 h-3.5 w-3.5" />
-          {status.label}
-        </Badge>
-      </TableCell>
-      {/* NEW: Vendor column */}
-      <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Vendor'}</TableCell>
-      <TableCell>{requester?.name || request.requestedBy}</TableCell>
-      <TableCell className="text-right text-muted-foreground">
-        {/* Handle potential Firestore Timestamp object */}
-        {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
-      </TableCell>
-      {/* <TableCell className="text-right">
-        <Button variant="outline" size="sm">View Details</Button>
-      </TableCell> */}
-    </TableRow>
-  );
-}
-
-// Update Skeleton
-function RequestTableSkeleton() {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Material</TableHead>
-          <TableHead className="text-center">Quantity</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Vendor</TableHead> {/* NEW */}
-          <TableHead>Requester</TableHead>
-          <TableHead className="text-right">Created</TableHead>
-          {/* <TableHead className="w-[120px]"></TableHead> */}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
-            <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-28" /></TableCell> {/* NEW */}
-            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-            {/* <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell> */}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
-}
-
-// Main page component
-export default function InventoryRequestPage() {
-  const allStatuses = Object.keys(statusConfig) as (keyof typeof statusConfig)[];
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+// --- Main Page Component ---
+export default function VendorsAndMaterialsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser(); // Still needed for 'requestedBy'
+  const { user } = useUser(); // Needed for submitting requests
 
-  // Fetch live data
-  const rawMaterialsRef = useMemoFirebase(() => collection(firestore, 'raw_materials'), [firestore]);
-  const requestsRef = useMemoFirebase(() => collection(firestore, 'material_requests'), [firestore]); // Assuming we keep this collection name
+  // State for the "New Delivery Request" dialog
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  // NEW: State for the "Add Vendor" dialog (stubbed for now)
+  const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
+   // NEW: State for the "Add Raw Material" dialog (stubbed for now)
+   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
 
+  // NEW: State for vendor search term
+  const [vendorSearchTerm, setVendorSearchTerm] = useState('');
+
+  // Fetch live Raw Materials data
+  const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
-  const { data: materialRequests, isLoading: isLoadingRequests } = useCollection<MaterialRequestWithVendor>(requestsRef); // Use updated type
 
-  // Form setup
-  const form = useForm<RequestFormValues>({
+  // NEW: Use mock vendors for now, add Firestore fetch later
+  const vendors = MOCK_VENDORS; // Replace with useCollection later
+  const isLoadingVendors = false; // Set to true when using useCollection
+
+  // NEW: Filter vendors based on search term
+  const filteredVendors = useMemo(() => {
+    if (!vendorSearchTerm) return vendors;
+    return vendors.filter(vendor =>
+      vendor.name.toLowerCase().includes(vendorSearchTerm.toLowerCase()) ||
+      vendor.email.toLowerCase().includes(vendorSearchTerm.toLowerCase())
+    );
+  }, [vendors, vendorSearchTerm]);
+
+  // Form for the "New Delivery Request" Dialog
+  const requestForm = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
-    defaultValues: { materialId: '', quantity: 0, vendorId: '' }, // NEW: Added vendorId default
+    defaultValues: { materialId: '', quantity: 0, unit: '', vendorId: '' },
   });
 
-  // Submit handler
-  async function onSubmit(data: RequestFormValues) {
-    // ---- TEMPORARY BYPASS FOR AUTH ----
-    const fakeUserId = 'user-2'; // Use Mercy's mock ID if user is null
+  // Handle Submission of "New Delivery Request"
+  async function onSubmitRequest(data: RequestFormValues) {
+    const fakeUserId = 'user-2'; // TEMPORARY BYPASS FOR AUTH
     const currentUserId = user ? user.uid : fakeUserId;
-    // ---- REMOVE THIS WHEN AUTH IS ENABLED ----
-
-    // if (!user) { // Keep this check for production
-    //    toast({ variant: "destructive", title: "Not logged in!", description: "Please log in." });
-    //   return;
-    // }
-
-    // Find user and material names for the email
-    const requester = users.find(u => u.id === currentUserId); // Still using mock users array for names
-    const material = rawMaterials?.find(m => m.id === data.materialId);
-    const vendor = vendors.find(v => v.id === data.vendorId);
-
-    if (!requester || !material || !vendor) {
-        toast({ variant: "destructive", title: "Data Error", description: "Could not find user, material, or vendor details." });
-        return;
-    }
-
-    let newRequestId: string | null = null; // Variable to store the new request ID
 
     try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(firestore, 'material_requests'), {
+      await addDoc(collection(firestore, COLLECTIONS.REQUESTS), { // Use constant
         materialId: data.materialId,
         quantity: data.quantity,
-        vendorId: data.vendorId, // NEW: Save vendorId
-        requestedBy: currentUserId, // Use real UID or fake ID
-        status: 'pending' as const, // Ensure type safety
+        unit: data.unit, // NEW: Save unit
+        vendorId: data.vendorId,
+        requestedBy: currentUserId,
+        status: 'pending' as const,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      toast({ title: "Delivery Request Sent", description: "Your request has been logged." });
+      requestForm.reset();
+      setIsRequestDialogOpen(false);
 
-      newRequestId = docRef.id; // Get the ID of the newly created document
-
-      toast({ title: "Request Submitted", description: "Inventory request logged successfully." });
-      form.reset();
-      setIsDialogOpen(false);
-
-      // --- NEW: Trigger the email flow ---
-      console.log("Calling sendRequestEmail flow for ID:", newRequestId);
-      // Construct the URL (adjust base URL if needed)
-      const requestUrl = `${window.location.origin}/operations/inventory?requestId=${newRequestId}`;
-
-      sendRequestEmail({
-          requestId: newRequestId,
-          materialName: material.name,
-          quantity: data.quantity,
-          requesterName: requester.name,
-          vendorName: vendor.name,
-          requestUrl: requestUrl, // Optional: Link back to the request
-      }).then((result: { success: boolean }) => {
-          if (result.success) {
-              console.log("Admin notification email process initiated successfully.");
-          } else {
-              console.error("Admin notification email process failed.");
-              // Optional: Show a less critical toast here?
-          }
-      }).catch((flowError: Error) => {
-          console.error("Error invoking sendRequestEmail flow:", flowError);
-          // Optional: Show a toast about notification failure
-      });
-      // Note: We don't await the flow call here - it runs in the background.
+      // TODO: Call email flow here if needed (using data from form/fetched names)
 
     } catch (error) {
       console.error("Error submitting request:", error);
-      toast({ variant: "destructive", title: "Submission Failed", description: "Could not save your request." });
-      // Don't try to send email if saving failed
+      toast({ variant: "destructive", title: "Submission Failed", description: "Could not save request." });
     }
   }
 
-  const isLoading = isLoadingRequests || isLoadingMaterials;
+  // --- Helper Functions for Raw Material Status (from Inventory page) ---
+  function getStatus(item: RawMaterial): { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
+      if (item.quantity === 0) return { text: 'Out of Stock', variant: 'destructive' };
+      if (item.quantity < item.reorderPoint) return { text: 'Low Stock', variant: 'outline' };
+      return { text: 'In Stock', variant: 'secondary' };
+  }
 
-  // Create lookup maps
-  const materialNameMap = useMemo(() => {
-    return (rawMaterials ?? []).reduce((acc, material) => {
-      acc[material.id] = material.name;
-      return acc;
-    }, {} as Record<string, string>);
-  }, [rawMaterials]);
-
-  // NEW: Vendor name map
-  const vendorNameMap = useMemo(() => {
-    return vendors.reduce((acc, vendor) => {
-        acc[vendor.id] = vendor.name;
-        return acc;
-    }, {} as Record<string, string>)
-  }, []); // vendors is static for now
-
-
+  // --- Main Render ---
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <div>
-          {/* Updated Title */}
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Inventory Requests</h1>
-          <p className="text-muted-foreground">
-            Create new requests for raw materials from vendors.
-          </p>
-        </div>
+        {/* Page Title */}
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Vendors & Materials</h1>
 
-        {/* Dialog Trigger */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {/* Create New Delivery Request Button + Dialog */}
+        <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
           <DialogTrigger asChild>
-             {/* Updated Button Text */}
             <Button>
-              <FilePlus2 className="mr-2" />
-              Create List
+              <PlusCircle className="mr-2 h-4 w-4" /> Create New Delivery Request
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              {/* Updated Title */}
-              <DialogTitle>Create Inventory Request List</DialogTitle>
+              <DialogTitle>New Delivery Request</DialogTitle>
               <DialogDescription>
-                Select materials, quantity, and vendor.
+                Request raw materials needed from a vendor.
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <Form {...requestForm}>
+              <form onSubmit={requestForm.handleSubmit(onSubmitRequest)} className="space-y-4 py-4">
+                {/* Raw Material Select */}
                 <FormField
-                  control={form.control}
+                  control={requestForm.control}
                   name="materialId"
-                  render={({ field }) => ( /* Material Select - Unchanged */
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Raw Material</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a material..." />
-                          </SelectTrigger>
-                        </FormControl>
+                      <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          // NEW: Automatically set unit based on selected material
+                          const selectedMat = rawMaterials?.find(m => m.id === value);
+                          if (selectedMat) {
+                              requestForm.setValue('unit', selectedMat.unit);
+                          }
+                      }} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a material..." /></SelectTrigger></FormControl>
                         <SelectContent>
-                           {isLoadingMaterials ? (
-                             <SelectItem value="loading" disabled>Loading...</SelectItem>
-                           ) : (
-                             (rawMaterials ?? []).map((material) => (
-                               <SelectItem key={material.id} value={material.id}>
-                                 {material.name} ({material.quantity} {material.unit} in stock)
-                               </SelectItem>
-                             ))
-                           )}
-                         </SelectContent>
-                       </Select>
-                       <FormMessage />
-                     </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => ( /* Quantity Input - Unchanged */
-                    <FormItem>
-                      <FormLabel>Quantity Needed</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.1" placeholder="e.g., 25.5" {...field} />
-                      </FormControl>
+                          {isLoadingMaterials ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
+                           (rawMaterials ?? []).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {/* NEW: Vendor Select Field */}
-                <FormField
-                  control={form.control}
+                {/* Quantity and Units Side-by-Side */}
+                <div className="grid grid-cols-3 gap-4">
+                   <FormField
+                    control={requestForm.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl><Input type="number" step="0.1" placeholder="e.g., 500" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={requestForm.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Units</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} /* value makes it controlled */ >
+                          <FormControl><SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {/* Derive units dynamically or use fixed list */}
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="liters">liters</SelectItem>
+                            <SelectItem value="units">units</SelectItem>
+                            <SelectItem value="rolls">rolls</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {/* Vendor Select */}
+                 <FormField
+                  control={requestForm.control}
                   name="vendorId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Vendor</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a vendor..." />
-                          </SelectTrigger>
-                        </FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a vendor..." /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {vendors.map((vendor) => (
-                            <SelectItem key={vendor.id} value={vendor.id}>
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
+                          {isLoadingVendors ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
+                           (vendors ?? []).map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -376,10 +268,9 @@ export default function InventoryRequestPage() {
                 />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                  {/* Updated Button Text */}
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Send List
+                  <Button type="submit" disabled={requestForm.formState.isSubmitting}>
+                    {requestForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send Request
                   </Button>
                 </DialogFooter>
               </form>
@@ -388,76 +279,153 @@ export default function InventoryRequestPage() {
         </Dialog>
       </div>
 
-      {/* Table Display Card */}
-      <Card>
-        <CardHeader>
-          {/* Updated Title */}
-          <CardTitle>Sent Inventory Lists</CardTitle>
-          <CardDescription>
-            History of all material requests sent to vendors.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">All</TabsTrigger>
-              {allStatuses.map(status => (
-                <TabsTrigger key={status} value={status}>{statusConfig[status].label}</TabsTrigger>
-              ))}
-            </TabsList>
+      {/* Tabs for Vendors and Raw Materials */}
+      <Tabs defaultValue="vendors">
+        <TabsList className="mb-4">
+          <TabsTrigger value="vendors">Vendors</TabsTrigger>
+          <TabsTrigger value="rawMaterials">Raw Materials</TabsTrigger>
+          {/* Add Packaging Materials tab later if needed */}
+        </TabsList>
 
-            {/* Content Tabs */}
-            <TabsContent value="all">
-              {isLoadingRequests ? <RequestTableSkeleton /> : (
+        {/* Vendors Tab Content */}
+        <TabsContent value="vendors">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                  <div>
+                      <CardTitle>Manage Vendors</CardTitle>
+                      <CardDescription>Add, view, or edit supplier information.</CardDescription>
+                  </div>
+                  {/* NEW: Add Vendor Button + Dialog (Stubbed) */}
+                   <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
+                     <DialogTrigger asChild>
+                       <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Vendor</Button>
+                     </DialogTrigger>
+                     <DialogContent>
+                         <DialogHeader><DialogTitle>Add New Vendor</DialogTitle></DialogHeader>
+                         <p>Vendor form will go here...</p>
+                         <DialogFooter>
+                            <Button variant="ghost" onClick={()=>setIsAddVendorDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={()=> { /* Add save logic here */ setIsAddVendorDialogOpen(false); }}>Save Vendor</Button>
+                         </DialogFooter>
+                     </DialogContent>
+                   </Dialog>
+              </div>
+              {/* NEW: Search Input */}
+              <div className="relative mt-4">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search vendors..."
+                    className="pl-8 w-full sm:w-[300px]"
+                    value={vendorSearchTerm}
+                    onChange={(e) => setVendorSearchTerm(e.target.value)}
+                  />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingVendors ? <p>Loading vendors...</p> : ( // Add Skeleton later
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Vendor</TableHead> {/* NEW */}
-                      <TableHead>Requester</TableHead>
-                      <TableHead className="text-right">Created</TableHead>
-                      {/* <TableHead className="w-[120px]"></TableHead> */}
+                      <TableHead>Vendor Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(materialRequests ?? []).map(req => (
-                      <RequestRow key={req.id} request={req} materialNameMap={materialNameMap} vendorNameMap={vendorNameMap} />
+                    {filteredVendors.length === 0 && (
+                        <TableRow><TableCell colSpan={3} className="text-center">No vendors found.</TableCell></TableRow>
+                    )}
+                    {filteredVendors.map((vendor) => (
+                      <TableRow key={vendor.id}>
+                        <TableCell className="font-medium">{vendor.name}</TableCell>
+                        <TableCell>{vendor.email}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="mr-1">View/Edit</Button>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Delete</Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
-            </TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {allStatuses.map(status => (
-              <TabsContent key={status} value={status}>
-                {isLoadingRequests ? <RequestTableSkeleton /> : (
-                  <Table>
-                    <TableHeader>
-                      {/* (Same header row as above) */}
-                       <TableRow>
-                          <TableHead>Material</TableHead>
-                          <TableHead className="text-center">Quantity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Vendor</TableHead>
-                          <TableHead>Requester</TableHead>
-                          <TableHead className="text-right">Created</TableHead>
-                          {/* <TableHead className="w-[120px]"></TableHead> */}
+        {/* Raw Materials Tab Content */}
+        <TabsContent value="rawMaterials">
+           <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Manage Raw Materials</CardTitle>
+                    <CardDescription>View stock levels and add new materials.</CardDescription>
+                  </div>
+                   {/* NEW: Add Raw Material Button + Dialog (Stubbed) */}
+                   <Dialog open={isAddMaterialDialogOpen} onOpenChange={setIsAddMaterialDialogOpen}>
+                     <DialogTrigger asChild>
+                       <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Material</Button>
+                     </DialogTrigger>
+                     <DialogContent>
+                         <DialogHeader><DialogTitle>Add New Raw Material</DialogTitle></DialogHeader>
+                         <p>Raw Material form will go here...</p>
+                          <DialogFooter>
+                            <Button variant="ghost" onClick={()=>setIsAddMaterialDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={()=> { /* Add save logic here */ setIsAddMaterialDialogOpen(false); }}>Save Material</Button>
+                         </DialogFooter>
+                     </DialogContent>
+                   </Dialog>
+                </div>
+                {/* Maybe add search/filter here later */}
+            </CardHeader>
+            <CardContent>
+              {isLoadingMaterials ? <p>Loading materials...</p> : ( // Add Skeleton later
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead>Reorder At</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(rawMaterials ?? []).map((item) => {
+                      const status = getStatus(item);
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            <Badge variant={status.variant} className={status.variant === 'outline' ? 'border-amber-500 text-amber-500' : ''}>
+                              {status.text}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{item.quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.unit}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.reorderPoint}</TableCell>
+                           <TableCell className="text-right">
+                             <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4"/></Button>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                           </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(materialRequests ?? []).filter(r => r.status === status).map(req => (
-                        <RequestRow key={req.id} request={req} materialNameMap={materialNameMap} vendorNameMap={vendorNameMap}/>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
-        </CardContent>
-      </Card>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Placeholder for Add/Edit Vendor/Material Dialogs if needed outside Tabs */}
+
     </div>
   );
 }
