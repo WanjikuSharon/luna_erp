@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { setCurrentUser, users } from '@/lib/data';
 import type { User as UserType } from '@/lib/types';
 import { useAuth, useUser } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -72,49 +73,48 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Keep this validation
     if (!email || !password) {
-        toast({
-            variant: "destructive",
-            title: "Missing fields",
-            description: "Please enter both email and password.",
-        })
-        return;
+      toast({ variant: "destructive", title: "Missing fields", description: "Please enter both email and password." });
+      return;
     }
 
+    // 2. Keep this @luna.co.ke check (Requirement)
     if (!email.endsWith('@luna.co.ke')) {
-        toast({
-            variant: "destructive",
-            title: "Invalid Email",
-            description: "Please use your @luna.co.ke email address.",
-        })
-        return;
+      toast({ variant: "destructive", title: "Invalid Email", description: "Please use your @luna.co.ke email address." });
+      return;
     }
 
-    const userToLogin = users.find(u => u.email === email);
-    
-    if (userToLogin) {
-        setCurrentUser(userToLogin.role);
-        switch (userToLogin.role) {
-            case 'admin':
-            router.push('/admin');
-            break;
-            case 'operations_manager':
-            router.push('/operations');
-            break;
-            case 'production_personnel':
-            router.push('/production');
-            break;
-            default:
-            router.push('/login');
-        }
-    } else {
+    // 3. THIS IS THE NEW LOGIC: Try to sign in with Firebase
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 4. Check for email verification (Requirement)
+      if (!user.emailVerified) {
         toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Invalid credentials.",
-        })
+          variant: "destructive",
+          title: "Verification Required",
+          description: "Please check your inbox and verify your email address before logging in.",
+        });
+        await auth.signOut(); // Sign them out until they are verified
+        return;
+      }
+
+      // 5. The useEffect hook above will handle the redirect automatically!
+      // No need for manual router.push() here - the useEffect watches the user state
+
+    } catch (error: any) {
+      // 6. Handle login errors
+      console.error("Login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Invalid credentials. Please check your email and password.",
+      });
     }
   };
 
