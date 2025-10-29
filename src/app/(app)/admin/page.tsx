@@ -16,11 +16,14 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { users, adminActivities } from '@/lib/data';
 import type { User, Activity } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
@@ -30,6 +33,18 @@ const roleConfig = {
 
 export default function AdminDashboardPage() {
     const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
+    
+    const firestore = useFirestore();
+
+    // Memoize references
+    const usersRef = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const activitiesRef = useMemoFirebase(() => collection(firestore, 'adminActivities'), [firestore]);
+
+    // Fetch data
+    const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersRef);
+    const { data: adminActivities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
+
+    const isLoading = isLoadingUsers || isLoadingActivities;
   return (
     <div className="flex flex-col gap-6">
         <div>
@@ -46,7 +61,7 @@ export default function AdminDashboardPage() {
               <UserIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              <div className="text-2xl font-bold">{isLoadingUsers ? '...' : (users?.length ?? 0)}</div>
               <p className="text-xs text-muted-foreground">all roles included</p>
             </CardContent>
           </Card>
@@ -91,6 +106,13 @@ export default function AdminDashboardPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                {isLoadingUsers ? (
+                    <div className="space-y-3">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </div>
+                ) : (
                 <Table>
                     <TableHeader>
                     <TableRow>
@@ -101,7 +123,7 @@ export default function AdminDashboardPage() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {users.map((user: User) => (
+                    {(users ?? []).map((user: User) => (
                         <TableRow key={user.id}>
                         <TableCell>
                             <div className="flex items-center gap-3">
@@ -128,6 +150,7 @@ export default function AdminDashboardPage() {
                     ))}
                     </TableBody>
                 </Table>
+                )}
                 </CardContent>
             </Card>
             <Card>
@@ -136,23 +159,33 @@ export default function AdminDashboardPage() {
                 <CardDescription>Recent high-level system and user activities.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {adminActivities.map((activity: Activity) => (
-                        <div key={activity.id} className="flex items-start gap-4">
-                            <Avatar className="h-9 w-9">
-                                <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
-                                <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="text-sm">
-                                <p className="font-medium">
-                                    {activity.user.name}{' '}
-                                    <span className="text-muted-foreground font-normal">{activity.action.toLowerCase()}</span>
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                                </p>
-                            </div>
+                    {isLoadingActivities ? (
+                        <div className="space-y-3">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
                         </div>
-                    ))}
+                    ) : (adminActivities && adminActivities.length > 0) ? (
+                        adminActivities.map((activity: Activity) => (
+                            <div key={activity.id} className="flex items-start gap-4">
+                                <Avatar className="h-9 w-9">
+                                    <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
+                                    <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="text-sm">
+                                    <p className="font-medium">
+                                        {activity.user.name}{' '}
+                                        <span className="text-muted-foreground font-normal">{activity.action.toLowerCase()}</span>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground">No activities yet. Activities will appear here once users start interacting with the system.</p>
+                    )}
                 </CardContent>
             </Card>
         </div>
