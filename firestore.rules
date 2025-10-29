@@ -48,7 +48,7 @@ service cloud.firestore {
       }
 
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if isSignedIn(); // Allow authenticated users to list all users (for admin dashboard)
       allow create: if isSignedIn() && isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
@@ -200,6 +200,54 @@ service cloud.firestore {
       allow create: if isSignedIn(); // TODO: Add role-based access control.
       allow update: if isSignedIn(); // TODO: Add role-based access control.
       allow delete: if isSignedIn(); // TODO: Add role-based access control.
+    }
+
+    /**
+     * @description Controls access to raw materials inventory.
+     * @path /rawMaterials/{materialId}
+     * @allow get, list: Authenticated users can read.
+     * @allow create, update, delete: Authenticated users can write.
+     * @principle Allows authenticated access to inventory data.
+     */
+    match /rawMaterials/{materialId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    /**
+     * @description Controls access to admin activities log.
+     * @path /adminActivities/{activityId}
+     * @allow get, list: Authenticated users can read.
+     * @allow create: Authenticated users can create.
+     * @principle Allows authenticated access to activity logs.
+     */
+    match /adminActivities/{activityId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    /**
+     * @description Controls access to operations activities log.
+     * @path /operationsActivities/{activityId}
+     * @allow get, list: Authenticated users can read.
+     * @allow create: Authenticated users can create.
+     * @principle Allows authenticated access to activity logs.
+     */
+    match /operationsActivities/{activityId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }
