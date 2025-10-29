@@ -314,26 +314,9 @@ export default function RequestsPage() {
                             ))}
                         </TabsList>
 
+                        {/* NEW: Handle the main "all" tab */}
                         <TabsContent value="all">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Material</TableHead>
-                                        <TableHead className="text-center">Quantity</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Requester</TableHead>
-                                        <TableHead className="text-right">Created</TableHead>
-                                        <TableHead className="w-[120px]"></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {materialRequests.map(req => <RequestRow key={req.id} request={req} />)}
-                                </TableBody>
-                            </Table>
-                        </TabsContent>
-
-                        {allStatuses.map(status => (
-                            <TabsContent key={status} value={status}>
+                            {isLoadingRequests ? <RequestTableSkeleton /> : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -346,9 +329,45 @@ export default function RequestsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {materialRequests.filter(r => r.status === status).map(req => <RequestRow key={req.id} request={req} />)}
+                                        {/* NEW: Map over (materialRequests ?? []) */}
+                                        {(materialRequests ?? []).map(req => (
+                                            // We pass the material name from our map
+                                            <RequestRow 
+                                                key={req.id} 
+                                                request={{...req, materialId: materialNameMap[req.materialId] || req.materialId}} 
+                                            />
+                                        ))}
                                     </TableBody>
                                 </Table>
+                            )}
+                        </TabsContent>
+
+                        {/* NEW: Handle the filtered tabs */}
+                        {allStatuses.map(status => (
+                            <TabsContent key={status} value={status}>
+                                {isLoadingRequests ? <RequestTableSkeleton /> : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Material</TableHead>
+                                                <TableHead className="text-center">Quantity</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Requester</TableHead>
+                                                <TableHead className="text-right">Created</TableHead>
+                                                <TableHead className="w-[120px]"></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {/* NEW: Filter (materialRequests ?? []) */}
+                                            {(materialRequests ?? []).filter(r => r.status === status).map(req => (
+                                                <RequestRow 
+                                                    key={req.id} 
+                                                    request={{...req, materialId: materialNameMap[req.materialId] || req.materialId}} 
+                                                />
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                )}
                             </TabsContent>
                         ))}
                     </Tabs>
