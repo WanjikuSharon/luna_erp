@@ -79,15 +79,16 @@ const requestFormSchema = z.object({
 type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 // This component logic is unchanged, but now reads live data
-function RequestRow({ request }: { request: MaterialRequest }) {
+function RequestRow({ request, materialNameMap }: { request: MaterialRequest, materialNameMap: Record<string, string> }) {
   const requester = users.find(u => u.id === request.requestedBy); // Still using mock users for now
   const status = statusConfig[request.status];
 
   return (
     <TableRow>
       <TableCell>
-        {/* Material name is passed through the materialId field */}
-        <div className="font-medium">{request.materialId}</div> 
+        {/* Display material name and ID */}
+        <div className="font-medium">{materialNameMap[request.materialId] || 'Unknown Material'}</div>
+        <div className="text-xs text-muted-foreground">{request.materialId}</div>
       </TableCell>
       <TableCell className="text-center">{request.quantity}</TableCell>
       <TableCell>
@@ -331,10 +332,10 @@ export default function RequestsPage() {
                                     <TableBody>
                                         {/* NEW: Map over (materialRequests ?? []) */}
                                         {(materialRequests ?? []).map(req => (
-                                            // We pass the material name from our map
                                             <RequestRow 
                                                 key={req.id} 
-                                                request={{...req, materialId: materialNameMap[req.materialId] || req.materialId}} 
+                                                request={req}
+                                                materialNameMap={materialNameMap}
                                             />
                                         ))}
                                     </TableBody>
@@ -362,7 +363,8 @@ export default function RequestsPage() {
                                             {(materialRequests ?? []).filter(r => r.status === status).map(req => (
                                                 <RequestRow 
                                                     key={req.id} 
-                                                    request={{...req, materialId: materialNameMap[req.materialId] || req.materialId}} 
+                                                    request={req}
+                                                    materialNameMap={materialNameMap}
                                                 />
                                             ))}
                                         </TableBody>
