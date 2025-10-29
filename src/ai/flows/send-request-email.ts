@@ -1,8 +1,8 @@
 // src/ai/flows/send-request-email.ts
 'use server';
 
-import { defineFlow } from 'genkit';
-import { z } from 'genkit/zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { notifyAdmins } from './notify-admins'; // Import the other flow
 
 // Define input based on MaterialRequestWithVendor data needed for the email
@@ -15,13 +15,13 @@ const SendRequestEmailInputSchema = z.object({
   requestUrl: z.string().optional().describe("A direct link to view the request in the ERP (optional)."),
 });
 
-export const sendRequestEmail = defineFlow(
+const sendRequestEmailFlow = ai.defineFlow(
   {
     name: 'sendRequestEmail',
     inputSchema: SendRequestEmailInputSchema,
     outputSchema: z.object({ success: z.boolean() }),
   },
-  async (requestDetails) => {
+  async requestDetails => {
     console.log('sendRequestEmail flow triggered for request:', requestDetails.requestId);
 
     // Format the email content
@@ -50,3 +50,9 @@ export const sendRequestEmail = defineFlow(
     }
   }
 );
+
+export async function sendRequestEmail(
+  input: z.infer<typeof SendRequestEmailInputSchema>
+): Promise<{ success: boolean }> {
+  return sendRequestEmailFlow(input);
+}
