@@ -1,9 +1,9 @@
 import { config } from 'dotenv';
-config();
+config({ path: '.env.local' }); // <-- Tell it to read the .env.local file
 
 import '@/ai/flows/explain-inventory-discrepancy.ts';
 import '@/ai/flows/suggest-inventory-update.ts';
-import '@/ai/flows/notify-admins.ts';         // NEW
-import '@/ai/flows/send-request-email.ts';    // NEW
-// Import Cloudinary flow later when you build it
-// import '@/ai/flows/generate-upload-signature.ts';
+
+// Add these lines from our previous steps
+import '@/ai/flows/notify-admins.ts';
+import '@/ai/flows/send-request-email.ts';
