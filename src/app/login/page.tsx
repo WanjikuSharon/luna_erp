@@ -113,12 +113,14 @@ export default function LoginPage() {
   return (
     <>
       <div className="relative flex min-h-screen w-full items-center justify-center p-4">
-        {/* Background Image */}
+        {/* Background Image - Stretch to fill entire screen */}
         <Image
           src="/login-background.jpg" // Uses the image from your public/ folder
           alt="Luna Industries products in a kitchen"
           fill
-          className="object-cover z-0"
+          className="object-cover object-center z-0"
+          priority
+          quality={100}
         />
 
         {/* Login Modal Card */}
@@ -127,6 +129,9 @@ export default function LoginPage() {
             
             {/* Left Side (Blue Panel) */}
             <div className="w-full md:w-2/5 bg-[#096394] text-white p-8 md:p-12 flex flex-col justify-center items-center text-center">
+              <h2 className="font-headline text-3xl font-bold tracking-tight mb-4">
+                Luna Industries
+              </h2>
               <div className="relative h-24 w-24 mb-4">
                 <Image 
                   src={newLogoUrl} 
@@ -135,9 +140,6 @@ export default function LoginPage() {
                   className="object-contain rounded-full" 
                 />
               </div>
-              <h2 className="font-headline text-3xl font-bold tracking-tight">
-                Luna Industries
-              </h2>
               <p className="mt-2 text-white/80">
                 Premium Home and Body Care
               </p>
@@ -145,7 +147,7 @@ export default function LoginPage() {
 
             {/* Right Side (Form Panel) */}
             <div className="w-full md:w-3/5 p-8 md:p-12">
-              <h2 className="font-headline text-3xl font-bold text-center md:text-left">
+              <h2 className="font-headline text-3xl font-bold text-center text-[#096394] mb-6">
                 ERP System
               </h2>
 
@@ -163,16 +165,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                    <Link
-                      href="/forgot-password"
-                      className="ml-auto inline-block text-sm text-red-600 hover:underline" // Updated color
-                      prefetch={false}
-                    >
-                      Forgot Password?
-                    </Link>
-                  </div>
+                  <Label htmlFor="password">Password</Label>
                   <Input 
                       id="password" 
                       type="password" 
@@ -180,11 +173,18 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                   />
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-[#096394] hover:underline"
+                    prefetch={false}
+                  >
+                    Forgot Password?
+                  </Link>
                 </div>
-                {/* Updated button color and text */}
+                {/* Updated button color to golden orange */}
                 <Button 
                   type="submit" 
-                  className="w-full bg-[#B5914A] hover:bg-[#a18243] text-white" 
+                  className="w-full bg-[#FF8C42] hover:bg-[#ff7a28] text-white" 
                   disabled={isUserLoading || isUserDataLoading}
                 >
                   {isUserLoading || isUserDataLoading ? 'SIGNING IN...' : 'SIGN IN'}
