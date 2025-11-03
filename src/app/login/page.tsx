@@ -26,7 +26,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth'; // Import for login
 
 export default function LoginPage() {
   const [email, setEmail] = useState('mercy.mugati@luna.co.ke');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('Operations123#');
   const [showNoAccountDialog, setShowNoAccountDialog] = useState(false);
 
   // --- All your existing hooks (unchanged) ---
@@ -44,12 +44,29 @@ export default function LoginPage() {
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
   );
-  const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userDocRef);
+  const { data: userData, isLoading: isUserDataLoading, error: userDataError } = useDoc<UserType>(userDocRef);
 
-  // --- Your existing redirect logic (unchanged) ---
+  // Log any errors from Firestore
   useEffect(() => {
+    if (userDataError) {
+      console.error('Firestore error when fetching user data:', userDataError);
+    }
+  }, [userDataError]);
+
+  // --- Your existing redirect logic with debugging ---
+  useEffect(() => {
+    console.log('Auth State:', {
+      user: user?.uid,
+      email: user?.email,
+      isUserLoading,
+      isUserDataLoading,
+      userData,
+      userDocRef: userDocRef?.path,
+    });
+
     if (!isUserLoading && !isUserDataLoading) {
       if (user && userData) {
+        console.log('User authenticated with data:', userData);
         switch (userData.role) {
           case 'admin':
             router.push('/admin');
@@ -65,15 +82,25 @@ export default function LoginPage() {
         }
       } else if (user && !userData) {
         console.error("User document not found for UID:", user.uid);
-        toast({
-          variant: "destructive",
-          title: "Profile Error",
-          description: "Your user account is not fully set up. Please contact ICT.",
-        });
-        auth.signOut(); 
+        console.error("Expected path:", `users/${user.uid}`);
+        console.error("Document ref:", userDocRef);
+        console.error("User data loading:", isUserDataLoading);
+        console.error("Firestore error:", userDataError);
+        
+        // TEMPORARY: Redirect to operations anyway for debugging
+        console.warn("TEMPORARY: Redirecting to /operations despite missing user data");
+        router.push('/operations');
+        
+        // Commented out sign out for debugging
+        // toast({
+        //   variant: "destructive",
+        //   title: "Profile Error",
+        //   description: "Your user account is not fully set up. Please contact ICT.",
+        // });
+        // auth.signOut(); 
       }
     }
-  }, [user, isUserLoading, userData, isUserDataLoading, router, auth, toast]);
+  }, [user, isUserLoading, userData, isUserDataLoading, router, auth, toast, userDocRef, userDataError]);
 
   // --- Your existing login logic (unchanged) ---
   const handleLogin = async (e: React.FormEvent) => {
@@ -89,15 +116,16 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      if (!user.emailVerified) {
-        toast({
-          variant: "destructive",
-          title: "Verification Required",
-          description: "Please check your inbox and verify your email address.",
-        });
-        await auth.signOut();
-        return;
-      }
+      // Temporarily disabled email verification check for development
+      // if (!user.emailVerified) {
+      //   toast({
+      //     variant: "destructive",
+      //     title: "Verification Required",
+      //     description: "Please check your inbox and verify your email address.",
+      //   });
+      //   await auth.signOut();
+      //   return;
+      // }
       // Redirect is handled by the useEffect hook
     } catch (error: any) {
       console.error("Login failed:", error);
