@@ -324,7 +324,13 @@ export default function ProductionPage() {
               {(productionActivities ?? []).length === 0 && !isLoadingActivities && (
                 <p className="text-sm text-muted-foreground">No activities logged yet.</p>
               )}
-              {(productionActivities ?? []).map((activity: Activity) => (
+              {(productionActivities ?? []).map((activity: Activity) => {
+                const timestamp = activity.timestamp as any;
+                const displayDate = timestamp?.toDate 
+                  ? format(timestamp.toDate(), "MM/dd/yyyy 'at' h:mm a")
+                  : format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a");
+                
+                return (
                 <div key={activity.id} className="flex items-start gap-4">
                   <Avatar className="h-9 w-9 border">
                     <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
@@ -336,15 +342,12 @@ export default function ProductionPage() {
                       {' '}{activity.action}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {/* Check if timestamp is a Firestore timestamp */}
-                      {activity.timestamp.toDate ? 
-                        format(activity.timestamp.toDate(), "MM/dd/yyyy 'at' h:mm a") :
-                        format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a")
-                      }
+                      {displayDate}
                     </p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>
