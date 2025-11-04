@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea'; // NEW
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // NEW
 import { Calendar } from '@/components/ui/calendar'; // NEW
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // NEW
+import { Label } from '@/components/ui/label'; // NEW
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { RawMaterial, Product } from '@/lib/types'; // Import main types
@@ -207,8 +208,12 @@ export default function LogProductionPage() {
         for (const material of data.rawMaterialsUsed) {
           const matRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, material.materialId);
           const matDoc = await transaction.get(matRef);
-          if (!matDoc.exists() || matDoc.data().quantity < material.quantity) {
-            throw new Error(`Not enough stock for ${matDoc.data().name || material.materialId}`);
+          if (!matDoc.exists()) {
+            throw new Error(`Raw material not found: ${material.materialId}`);
+          }
+          const matData = matDoc.data();
+          if (matData.quantity < material.quantity) {
+            throw new Error(`Not enough stock for ${matData.name || material.materialId}`);
           }
           transaction.update(matRef, { quantity: increment(-material.quantity) });
         }
