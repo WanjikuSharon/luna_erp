@@ -8,6 +8,7 @@ export const COLLECTIONS = {
     PACKAGING: 'packaging_materials',
     REQUESTS: 'material_requests',
     USERS: 'users',
+    VENDORS: 'vendors',
 } as const;
 
 // Re-export types for potentially easier access if needed elsewhere
