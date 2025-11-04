@@ -61,29 +61,22 @@ import { PlusCircle, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 // Firebase & Data
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { RawMaterial } from '@/lib/types'; // Keep RawMaterial type
-import { COLLECTIONS } from '@/services/inventory_service'; // Use centralized collection names
+import type { RawMaterial, Vendor } from '@/lib/types';
+import { COLLECTIONS } from '@/services/inventory_service';
+import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import { users as mockUsers } from '@/lib/data'; // For requester name
 
-// NEW: Define Vendor type (add to src/lib/types.ts later if needed)
-type Vendor = {
-    id: string; // Will come from Firestore doc ID
-    name: string;
-    email: string;
-    // Add other fields like phone, address later
-};
-
-// --- Form Schema for the "New Delivery Request" Dialog ---
-// NEW: Add 'unit' field based on screenshot
+// --- Form Schema for "New Delivery Request" (matches screenshot) ---
 const requestFormSchema = z.object({
   materialId: z.string().min(1, 'Please select a material.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be positive.'),
-  unit: z.string().min(1, 'Please select units.'), // NEW
+  unit: z.string().min(1, 'Please select units.'),
   vendorId: z.string().min(1, 'Please select a vendor.'),
 });
 type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 // --- Mock Data (Replace with Firestore later) ---
-// NEW: Mock Vendors List
+// TODO: Replace this with a useCollection hook for COLLECTIONS.VENDORS
 const MOCK_VENDORS: Vendor[] = [
     { id: 'v1', name: 'Tech Supplies Inc.', email: 'techsupplies@example.com' },
     { id: 'v2', name: 'Global Materials Co.', email: 'globalmaterials@example.com' },
@@ -100,23 +93,23 @@ export default function VendorsAndMaterialsPage() {
 
   // State for the "New Delivery Request" dialog
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
-  // NEW: State for the "Add Vendor" dialog (stubbed for now)
+  // State for the "Add Vendor" dialog (stubbed for now)
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
-   // NEW: State for the "Add Raw Material" dialog (stubbed for now)
-   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+  // State for the "Add Raw Material" dialog (stubbed for now)
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
 
-  // NEW: State for vendor search term
+  // State for vendor search term
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
 
   // Fetch live Raw Materials data
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
 
-  // NEW: Use mock vendors for now, add Firestore fetch later
+  // Use mock vendors for now, add Firestore fetch later
   const vendors = MOCK_VENDORS; // Replace with useCollection later
   const isLoadingVendors = false; // Set to true when using useCollection
 
-  // NEW: Filter vendors based on search term
+  // Filter vendors based on search term
   const filteredVendors = useMemo(() => {
     if (!vendorSearchTerm) return vendors;
     return vendors.filter(vendor =>
@@ -135,23 +128,46 @@ export default function VendorsAndMaterialsPage() {
   async function onSubmitRequest(data: RequestFormValues) {
     const fakeUserId = 'user-2'; // TEMPORARY BYPASS FOR AUTH
     const currentUserId = user ? user.uid : fakeUserId;
+    
+    const requester = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+    const material = rawMaterials?.find(m => m.id === data.materialId);
+    const vendor = vendors?.find(v => v.id === data.vendorId);
+
+    if (!requester || !material || !vendor) {
+        toast({ variant: "destructive", title: "Data Error", description: "Could not find user, material, or vendor details." });
+        return;
+    }
+
+    let newRequestId: string | null = null;
 
     try {
-      await addDoc(collection(firestore, COLLECTIONS.REQUESTS), { // Use constant
+      const docRef = await addDoc(collection(firestore, COLLECTIONS.REQUESTS), {
         materialId: data.materialId,
         quantity: data.quantity,
-        unit: data.unit, // NEW: Save unit
+        unit: data.unit,
         vendorId: data.vendorId,
         requestedBy: currentUserId,
         status: 'pending' as const,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      newRequestId = docRef.id;
       toast({ title: "Delivery Request Sent", description: "Your request has been logged." });
       requestForm.reset();
       setIsRequestDialogOpen(false);
 
-      // TODO: Call email flow here if needed (using data from form/fetched names)
+      // --- Call Genkit Flow (as planned by senior dev) ---
+      sendRequestEmail({
+          requestId: newRequestId,
+          materialName: material.name,
+          quantity: data.quantity,
+          requesterName: requester.name,
+          vendorName: vendor.name,
+          requestUrl: `${window.location.origin}/operations/requests?requestId=${newRequestId}`,
+      }).catch(flowError => {
+          console.error("Error invoking sendRequestEmail flow:", flowError);
+      });
 
     } catch (error) {
       console.error("Error submitting request:", error);
@@ -159,11 +175,11 @@ export default function VendorsAndMaterialsPage() {
     }
   }
 
-  // --- Helper Functions for Raw Material Status (from Inventory page) ---
-  function getStatus(item: RawMaterial): { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
-      if (item.quantity === 0) return { text: 'Out of Stock', variant: 'destructive' };
-      if (item.quantity < item.reorderPoint) return { text: 'Low Stock', variant: 'outline' };
-      return { text: 'In Stock', variant: 'secondary' };
+  // Helper for raw material status
+  function getStatus(item: RawMaterial) {
+    if (item.quantity === 0) return { text: 'Out of Stock', variant: 'destructive' as const };
+    if (item.quantity < item.reorderPoint) return { text: 'Low Stock', variant: 'outline' as const };
+    return { text: 'In Stock', variant: 'secondary' as const };
   }
 
   // --- Main Render ---
@@ -173,7 +189,7 @@ export default function VendorsAndMaterialsPage() {
         {/* Page Title */}
         <h1 className="text-3xl font-bold font-headline tracking-tight">Vendors & Materials</h1>
 
-        {/* Create New Delivery Request Button + Dialog */}
+        {/* --- Create New Delivery Request Button + Dialog --- */}
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -183,9 +199,6 @@ export default function VendorsAndMaterialsPage() {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>New Delivery Request</DialogTitle>
-              <DialogDescription>
-                Request raw materials needed from a vendor.
-              </DialogDescription>
             </DialogHeader>
             <Form {...requestForm}>
               <form onSubmit={requestForm.handleSubmit(onSubmitRequest)} className="space-y-4 py-4">
@@ -198,11 +211,9 @@ export default function VendorsAndMaterialsPage() {
                       <FormLabel>Raw Material</FormLabel>
                       <Select onValueChange={(value) => {
                           field.onChange(value);
-                          // NEW: Automatically set unit based on selected material
+                          // Automatically set unit based on selected material
                           const selectedMat = rawMaterials?.find(m => m.id === value);
-                          if (selectedMat) {
-                              requestForm.setValue('unit', selectedMat.unit);
-                          }
+                          if (selectedMat) requestForm.setValue('unit', selectedMat.unit);
                       }} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a material..." /></SelectTrigger></FormControl>
                         <SelectContent>
@@ -233,10 +244,9 @@ export default function VendorsAndMaterialsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Units</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} /* value makes it controlled */ >
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {/* Derive units dynamically or use fixed list */}
                             <SelectItem value="kg">kg</SelectItem>
                             <SelectItem value="liters">liters</SelectItem>
                             <SelectItem value="units">units</SelectItem>
@@ -279,31 +289,30 @@ export default function VendorsAndMaterialsPage() {
         </Dialog>
       </div>
 
-      {/* Tabs for Vendors and Raw Materials */}
+      {/* --- Tabs for Vendors and Raw Materials --- */}
       <Tabs defaultValue="vendors">
         <TabsList className="mb-4">
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
           <TabsTrigger value="rawMaterials">Raw Materials</TabsTrigger>
-          {/* Add Packaging Materials tab later if needed */}
         </TabsList>
 
-        {/* Vendors Tab Content */}
+        {/* --- Vendors Tab --- */}
         <TabsContent value="vendors">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                  <div>
+                  <div className="space-y-1">
                       <CardTitle>Manage Vendors</CardTitle>
                       <CardDescription>Add, view, or edit supplier information.</CardDescription>
                   </div>
-                  {/* NEW: Add Vendor Button + Dialog (Stubbed) */}
+                  {/* Add Vendor Button + Dialog (Stubbed) */}
                    <Dialog open={isAddVendorDialogOpen} onOpenChange={setIsAddVendorDialogOpen}>
                      <DialogTrigger asChild>
                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Vendor</Button>
                      </DialogTrigger>
                      <DialogContent>
                          <DialogHeader><DialogTitle>Add New Vendor</DialogTitle></DialogHeader>
-                         <p>Vendor form will go here...</p>
+                         <p>Form for adding a new vendor will go here.</p>
                          <DialogFooter>
                             <Button variant="ghost" onClick={()=>setIsAddVendorDialogOpen(false)}>Cancel</Button>
                             <Button onClick={()=> { /* Add save logic here */ setIsAddVendorDialogOpen(false); }}>Save Vendor</Button>
@@ -311,7 +320,7 @@ export default function VendorsAndMaterialsPage() {
                      </DialogContent>
                    </Dialog>
               </div>
-              {/* NEW: Search Input */}
+              {/* Search Input */}
               <div className="relative mt-4">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -324,7 +333,7 @@ export default function VendorsAndMaterialsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoadingVendors ? <p>Loading vendors...</p> : ( // Add Skeleton later
+              {isLoadingVendors ? <p>Loading vendors...</p> : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -342,8 +351,8 @@ export default function VendorsAndMaterialsPage() {
                         <TableCell className="font-medium">{vendor.name}</TableCell>
                         <TableCell>{vendor.email}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="mr-1">View/Edit</Button>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Delete</Button>
+                          <Button variant="link" className="px-2">View/Edit</Button>
+                          <Button variant="link" className="px-2 text-destructive hover:text-destructive">Delete</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -354,7 +363,7 @@ export default function VendorsAndMaterialsPage() {
           </Card>
         </TabsContent>
 
-        {/* Raw Materials Tab Content */}
+        {/* --- Raw Materials Tab --- */}
         <TabsContent value="rawMaterials">
            <Card>
             <CardHeader>
@@ -363,14 +372,14 @@ export default function VendorsAndMaterialsPage() {
                     <CardTitle>Manage Raw Materials</CardTitle>
                     <CardDescription>View stock levels and add new materials.</CardDescription>
                   </div>
-                   {/* NEW: Add Raw Material Button + Dialog (Stubbed) */}
+                  {/* Add Raw Material Button + Dialog (Stubbed) */}
                    <Dialog open={isAddMaterialDialogOpen} onOpenChange={setIsAddMaterialDialogOpen}>
                      <DialogTrigger asChild>
                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Material</Button>
                      </DialogTrigger>
                      <DialogContent>
                          <DialogHeader><DialogTitle>Add New Raw Material</DialogTitle></DialogHeader>
-                         <p>Raw Material form will go here...</p>
+                         <p>Form for adding a new material will go here.</p>
                           <DialogFooter>
                             <Button variant="ghost" onClick={()=>setIsAddMaterialDialogOpen(false)}>Cancel</Button>
                             <Button onClick={()=> { /* Add save logic here */ setIsAddMaterialDialogOpen(false); }}>Save Material</Button>
@@ -378,10 +387,9 @@ export default function VendorsAndMaterialsPage() {
                      </DialogContent>
                    </Dialog>
                 </div>
-                {/* Maybe add search/filter here later */}
             </CardHeader>
             <CardContent>
-              {isLoadingMaterials ? <p>Loading materials...</p> : ( // Add Skeleton later
+              {isLoadingMaterials ? <p>Loading materials...</p> : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -423,9 +431,6 @@ export default function VendorsAndMaterialsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Placeholder for Add/Edit Vendor/Material Dialogs if needed outside Tabs */}
-
     </div>
   );
 }
