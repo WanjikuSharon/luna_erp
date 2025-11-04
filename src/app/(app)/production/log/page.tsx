@@ -211,7 +211,7 @@ export default function LogProductionPage() {
           if (!matDoc.exists()) {
             throw new Error(`Raw material not found: ${material.materialId}`);
           }
-          const matData = matDoc.data();
+          const matData = matDoc.data() as RawMaterial;
           if (matData.quantity < material.quantity) {
             throw new Error(`Not enough stock for ${matData.name || material.materialId}`);
           }
