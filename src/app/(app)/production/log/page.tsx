@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form'; // NEW: Import useFieldArray and Controller
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -29,18 +30,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox'; // NEW
-import { Textarea } from '@/components/ui/textarea'; // NEW
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // NEW
-import { Calendar } from '@/components/ui/calendar'; // NEW
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // NEW
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import type { RawMaterial, Product } from '@/lib/types'; // Import main types
-import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react'; // NEW Icons
+import type { RawMaterial, Product } from '@/lib/types';
+import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// NEW: Firebase & Live Data Imports
 import {
   useFirestore,
   useCollection,
@@ -66,38 +65,61 @@ const MOCK_PACKAGING: PackagingMaterial[] = [
     { id: 'p3', name: 'Shower Gel Pump', sku: 'LUN-PMP-SGL', quantity: 5000, unit: 'units', reorderPoint: 500 },
 ];
 
-// NEW: QC Analysis Items from Form 2 [cite: 1000490926.jpg]
+// NEW: QC Analysis Items from Form 2
 const qcAnalysisTemplate = [
   "1. Colour appearance", "2. Feel/spread", "3. Smell", "4. Clarity", "5. Ph",
   "6. Viscosity", "7. Centrifuge stability", "8. Relative density", "9. A value",
-  "10. Assay", "11. Other", "12. Problems encountered/suggested", "13. Improvement"
+  "10. Assay", "11. Other"
 ].map(item => ({ analysis: item, standard: '', obtained: '' }));
 
-// --- NEW: Zod Schema for the entire 3-part form ---
+
+// --- UPDATED: Zod Schema with all QC fields ---
 const batchFormSchema = z.object({
-  // Tab 1: Batch Details (from Form 3 [cite: 1000490927.jpg])
+  // Tab 1: Batch Details
   productId: z.string().min(1, 'Please select a product.'),
   dateOfMfg: z.date({ required_error: 'Date of manufacture is required.' }),
   batchNumber: z.string().min(1, 'Batch number is required.'),
   batchSize: z.coerce.number().min(1, 'Batch size must be at least 1.'),
   mfRef: z.string().optional(),
 
-  // Tab 2: Raw Materials Used (from Form 1 [cite: 1000490923.jpg])
+  // Tab 2: Raw Materials Used
   rawMaterialsUsed: z.array(z.object({
     materialId: z.string().min(1, 'Select a material'),
     quantity: z.coerce.number().min(0.01, 'Qty > 0'),
     weighed: z.boolean().default(false),
   })).min(1, 'Add at least one raw material.'),
 
-  // Tab 3: QC & Packaging
-  // (Form 2 & 3 - combined for workflow)
+  // Tab 3, Sub-Tab 1: Raw Material QC
+  qcRawSealsOk: z.boolean().default(false),
+  qcRawWeightOk: z.boolean().default(false),
+  qcRawMaterialOk: z.boolean().default(false),
+  
+  // Tab 3, Sub-Tab 2: End Product QC (from Form 2)
+  qcEndLabelDetails: z.object({
+      dateOfMfg: z.date({ required_error: 'QC Mfg Date is required.'}),
+      expDate: z.date({ required_error: 'QC Exp Date is required.'}),
+      stocked: z.boolean().default(false),
+      batchSheet: z.string().optional(),
+      yield: z.string().optional(),
+      expectedYield: z.string().optional(),
+      percentYield: z.string().optional(),
+      analysedBy: z.string().min(1, 'Analysed By is required.'),
+      dateAnalysed: z.date({ required_error: 'Analysis Date is required.'}),
+      releaseForFilling: z.boolean().default(false),
+  }),
+  qcEndAnalysisItems: z.array(z.object({
+      analysis: z.string(),
+      standard: z.string().optional(),
+      obtained: z.string().optional(),
+  })).default(qcAnalysisTemplate), // Set default values
+  qcEndProblems: z.string().optional(),
+  qcEndImprovement: z.string().optional(),
+  
+  // Tab 4: Packaging
   packagingUsed: z.array(z.object({
     packagingId: z.string().min(1, 'Select packaging'),
     quantity: z.coerce.number().min(1, 'Qty > 0'),
   })).min(1, 'Add at least one packaging material.'),
-  
-  // Skipping full QC form for brevity, will add later
-  // For now, we just need the batch to be "Completed" to update stock
 });
 type BatchFormValues = z.infer<typeof batchFormSchema>;
 
@@ -107,22 +129,16 @@ export default function LogProductionPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  // --- NEW: Fetch Live Data for all dropdowns ---
+  // --- Data Fetching ---
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
-  // TODO: Create a 'packaging_materials' collection in Firestore
-  // const packagingRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PACKAGING), [firestore]);
-
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-  // Using mock packaging data for now
   const packagingMaterials = MOCK_PACKAGING;
   const isLoadingPackaging = false;
-  // const { data: packagingMaterials, isLoading: isLoadingPackaging } = useCollection<PackagingMaterial>(packagingRef);
-
   const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging;
 
-  // --- NEW: Setup react-hook-form for the complex batch form ---
+  // --- Form Setup ---
   const form = useForm<BatchFormValues>({
     resolver: zodResolver(batchFormSchema),
     defaultValues: {
@@ -131,52 +147,72 @@ export default function LogProductionPage() {
       mfRef: '',
       rawMaterialsUsed: [],
       packagingUsed: [],
+      // NEW: Set defaults for QC fields
+      qcRawSealsOk: false,
+      qcRawWeightOk: false,
+      qcRawMaterialOk: false,
+      qcEndLabelDetails: {
+          stocked: false,
+          releaseForFilling: false,
+          batchSheet: '',
+          yield: '',
+          expectedYield: '',
+          percentYield: '',
+          analysedBy: '',
+      },
+      qcEndAnalysisItems: qcAnalysisTemplate, // Use the template
+      qcEndProblems: '',
+      qcEndImprovement: '',
     },
   });
 
-  // NEW: FieldArray for Raw Materials (Form 1)
+  // FieldArray for Raw Materials
   const { fields: rawMaterialFields, append: appendRawMaterial, remove: removeRawMaterial } = useFieldArray({
     control: form.control,
     name: "rawMaterialsUsed",
   });
 
-  // NEW: FieldArray for Packaging (Form 3)
+  // FieldArray for QC Analysis Items
+  const { fields: qcAnalysisFields } = useFieldArray({
+      control: form.control,
+      name: "qcEndAnalysisItems"
+  });
+
+  // FieldArray for Packaging
   const { fields: packagingFields, append: appendPackaging, remove: removePackaging } = useFieldArray({
     control: form.control,
     name: "packagingUsed",
   });
 
-  // --- NEW: onSubmit Function with Full Batch Transaction ---
+  // --- onSubmit Function ---
   async function onSubmit(data: BatchFormValues) {
-    const fakeUserId = 'user-3'; // TEMPORARY BYPASS
+    const fakeUserId = 'user-3';
     const currentUserId = user ? user.uid : fakeUserId;
+    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
 
     try {
-      // --- This is the Firebase Transaction ---
       await runTransaction(firestore, async (transaction) => {
-        console.log("Starting transaction...");
-
-        // 1. Decrement ALL Raw Materials
+        // 1. Decrement Raw Materials
         for (const material of data.rawMaterialsUsed) {
           const matRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, material.materialId);
           const matDoc = await transaction.get(matRef);
-          if (!matDoc.exists() || matDoc.data().quantity < material.quantity) {
-            throw new Error(`Not enough stock for ${matDoc.data().name || material.materialId}`);
+          if (!matDoc.exists()) {
+            throw new Error(`Raw material not found: ${material.materialId}`);
+          }
+          const matData = matDoc.data();
+          if (matData.quantity < material.quantity) {
+            throw new Error(`Not enough stock for ${matData.name || material.materialId}`);
           }
           transaction.update(matRef, { quantity: increment(-material.quantity) });
         }
-        console.log("Raw materials debited.");
 
-        // 2. Decrement ALL Packaging Materials
+        // 2. Decrement Packaging Materials (Simulated logic, replace with real transaction.get)
         for (const item of data.packagingUsed) {
-          const pkgRef = doc(firestore, COLLECTIONS.PACKAGING, item.packagingId);
-          // TODO: Fetch from live collection when not using mock data
           const pkgItem = packagingMaterials.find(p => p.id === item.packagingId);
           if (!pkgItem || pkgItem.quantity < item.quantity) {
              throw new Error(`Not enough stock for ${pkgItem?.name || item.packagingId}`);
           }
-          // In a real scenario, you would transact.get() this doc
-          // For mock, we assume it works and will write the code as if it's real
+          // const pkgRef = doc(firestore, COLLECTIONS.PACKAGING, item.packagingId);
           // const pkgDoc = await transaction.get(pkgRef);
           // if (!pkgDoc.exists() || pkgDoc.data().quantity < item.quantity) {
           //   throw new Error(`Not enough stock for ${pkgDoc.data().name || item.packagingId}`);
@@ -184,49 +220,57 @@ export default function LogProductionPage() {
           // transaction.update(pkgRef, { quantity: increment(-item.quantity) });
           console.log(`(Simulated) Debiting ${item.quantity} of ${pkgItem.name}`);
         }
-        console.log("Packaging materials debited.");
 
-        // 3. Increment ONE Finished Product
+        // 3. Increment Finished Product
         const prodRef = doc(firestore, COLLECTIONS.PRODUCTS, data.productId);
         transaction.update(prodRef, { 
           quantity: increment(data.batchSize) 
         });
-        console.log("Finished product credited.");
 
         // 4. Create the Batch Manufacturing Record
-        const batchRef = doc(collection(firestore, 'production_batches')); // Create new doc ref
+        const batchRef = doc(collection(firestore, 'production_batches'));
         
-        // Get names for logging
         const productName = products?.find(p => p.id === data.productId)?.name || 'Unknown Product';
-        const rawMaterialsUsedWithNames = data.rawMaterialsUsed.map(m => ({
-            ...m,
-            name: rawMaterials?.find(rm => rm.id === m.materialId)?.name || 'Unknown'
-        }));
-        const packagingUsedWithNames = data.packagingUsed.map(p => ({
-            ...p,
-            name: packagingMaterials?.find(pm => pm.id === p.packagingId)?.name || 'Unknown'
-        }));
+        const rawMaterialsUsedWithNames = data.rawMaterialsUsed.map(m => ({...m, name: rawMaterials?.find(rm => rm.id === m.materialId)?.name || 'Unknown'}));
+        const packagingUsedWithNames = data.packagingUsed.map(p => ({...p, name: packagingMaterials?.find(pm => pm.id === p.packagingId)?.name || 'Unknown'}));
 
         const newBatchData = {
+          // Batch Info
           productId: data.productId,
           productName: productName,
           dateOfMfg: data.dateOfMfg,
           batchNumber: data.batchNumber,
           batchSize: data.batchSize,
           mfRef: data.mfRef || '',
+          
+          // Materials
           rawMaterialsUsed: rawMaterialsUsedWithNames,
           packagingUsed: packagingUsedWithNames,
-          // TODO: Add QC data here
-          qcAnalysis: qcAnalysisTemplate, // Using placeholder template for now
-          qcProblems: '',
-          qcLabelDetails: { /* Add QC label data here */ },
-          status: 'Completed' as const, // We assume this form completes it
+          
+          // QC Info
+          qcRawMaterialChecks: {
+              sealsOk: data.qcRawSealsOk,
+              weightOk: data.qcRawWeightOk,
+              materialOk: data.qcRawMaterialOk,
+          },
+          qcEndProductAnalysis: {
+              labelDetails: {
+                  ...data.qcEndLabelDetails,
+                  batchNo: data.batchNumber, // Copy batch number
+              },
+              analysisItems: data.qcEndAnalysisItems,
+              problems: data.qcEndProblems || '',
+              improvement: data.qcEndImprovement || '',
+          },
+
+          // System Info
+          status: 'Completed' as const,
           createdBy: currentUserId,
+          createdByName: currentUser?.name || 'Unknown User',
           createdAt: serverTimestamp(),
         };
         
         transaction.set(batchRef, newBatchData);
-        console.log("Batch record created.");
       });
 
       // --- Transaction Successful ---
@@ -259,25 +303,22 @@ export default function LogProductionPage() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           
-          {/* --- This Card contains the multi-tab form --- */}
           <Card>
             <CardHeader>
               <CardTitle>New Batch Details</CardTitle>
-              <CardDescription>
-                Fill out all forms for this batch. Stock will be updated upon final submission.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="batch">
                 <TabsList className="mb-4">
                   <TabsTrigger value="batch">1. Batch Details</TabsTrigger>
                   <TabsTrigger value="materials">2. Raw Materials Used</TabsTrigger>
-                  <TabsTrigger value="qc">3. QC Analysis</TabsTrigger>
+                  <TabsTrigger value="qc">3. Quality Control</TabsTrigger>
                   <TabsTrigger value="packaging">4. Packaging Used</TabsTrigger>
                 </TabsList>
 
-                {/* --- TAB 1: Batch Details (from Form 3) --- */}
+                {/* --- TAB 1: Batch Details --- */}
                 <TabsContent value="batch" className="space-y-4">
+                  {/* (This part is unchanged from last time) */}
                   <FormField
                     control={form.control}
                     name="productId"
@@ -358,8 +399,9 @@ export default function LogProductionPage() {
                   />
                 </TabsContent>
 
-                {/* --- TAB 2: Raw Materials Used (from Form 1) --- */}
+                {/* --- TAB 2: Raw Materials Used --- */}
                 <TabsContent value="materials" className="space-y-4">
+                  {/* (This part is unchanged from last time) */}
                   <div className="space-y-2">
                     {rawMaterialFields.map((item, index) => (
                       <div key={item.id} className="flex gap-4 items-end p-2 border rounded-md">
@@ -417,17 +459,259 @@ export default function LogProductionPage() {
                   </Button>
                 </TabsContent>
                 
-                {/* --- TAB 3: QC Analysis (from Form 2) --- */}
+                
+                {/* --- TAB 3: Quality Control (with Nested Tabs) --- */}
                 <TabsContent value="qc" className="space-y-4">
                    <CardDescription>
-                      This section will contain the 13-point QC checklist. For now, it's a placeholder.
+                      Log all quality control checks for raw materials and the final product.
                    </CardDescription>
-                   {/* Placeholder for the 13-point form */}
-                   <Textarea placeholder="Enter QC analysis details here... (Full form coming soon)" rows={10} />
+                   
+                   <Tabs defaultValue="rawMaterial" className="w-full">
+                      <TabsList>
+                        <TabsTrigger value="rawMaterial">Raw Material QC</TabsTrigger>
+                        <TabsTrigger value="endProduct">End Product QC</TabsTrigger>
+                      </TabsList>
+                      
+                      {/* Sub-Tab 1: Raw Material QC */}
+                      <TabsContent value="rawMaterial" className="pt-4 space-y-4">
+                        <p className="text-sm text-muted-foreground">Confirm checks performed when raw materials were received.</p>
+                        <FormField
+                          control={form.control}
+                          name="qcRawSealsOk"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormLabel className="font-normal">No broken seals</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                         <FormField
+                          control={form.control}
+                          name="qcRawWeightOk"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormLabel className="font-normal">Weight matches requested quantity</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                         <FormField
+                          control={form.control}
+                          name="qcRawMaterialOk"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormLabel className="font-normal">Correct material type as ordered</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </TabsContent>
+                      
+                      {/* Sub-Tab 2: End Product QC (from Form 2) */}
+                      <TabsContent value="endProduct" className="pt-4">
+                        <div className="space-y-6">
+                          
+                          {/* Label Details Section */}
+                          <div className="border p-4 rounded-md space-y-4">
+                            <h4 className="font-semibold">Label Details & Yield</h4>
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.dateOfMfg"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Date of Mfg</FormLabel>
+                                      <Popover>
+                                        <PopoverTrigger asChild><FormControl>
+                                            <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl></PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                                        </PopoverContent>
+                                      </Popover>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.expDate"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Exp. Date</FormLabel>
+                                      <Popover>
+                                        <PopoverTrigger asChild><FormControl>
+                                            <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl></PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                                        </PopoverContent>
+                                      </Popover>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.yield"
+                                  render={({ field }) => (
+                                    <FormItem><FormLabel>Yield</FormLabel>
+                                      <FormControl><Input placeholder="e.g., 500kg" {...field} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.expectedYield"
+                                  render={({ field }) => (
+                                    <FormItem><FormLabel>Expected Yield</FormLabel>
+                                      <FormControl><Input placeholder="e.g., 510kg" {...field} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                 <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.percentYield"
+                                  render={({ field }) => (
+                                    <FormItem><FormLabel>% Yield</FormLabel>
+                                      <FormControl><Input placeholder="e.g., 98%" {...field} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.batchSheet"
+                                  render={({ field }) => (
+                                    <FormItem><FormLabel>Batch Sheet</FormLabel>
+                                      <FormControl><Input {...field} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.stocked"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 h-10 mt-9">
+                                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                      <FormLabel className="font-normal">Stocked (yes/no)</FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                             </div>
+                          </div>
+                          
+                          {/* Analysis Table Section */}
+                          <div className="border p-4 rounded-md">
+                            <h4 className="font-semibold">Analysis</h4>
+                            {qcAnalysisFields.map((item, index) => (
+                                <div key={item.id} className="grid grid-cols-12 gap-2 items-center py-1">
+                                    <label className="col-span-3 text-xs">{item.analysis}</label>
+                                    <FormField
+                                      control={form.control}
+                                      name={`qcEndAnalysisItems.${index}.standard`}
+                                      render={({ field }) => (
+                                        <FormItem className="col-span-4">
+                                          <FormControl><Input placeholder="Standard" {...field} /></FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name={`qcEndAnalysisItems.${index}.obtained`}
+                                      render={({ field }) => (
+                                        <FormItem className="col-span-5">
+                                          <FormControl><Input placeholder="Obtained" {...field} /></FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                </div>
+                            ))}
+                          </div>
+                          
+                          {/* Final Details Section */}
+                          <div className="border p-4 rounded-md space-y-4">
+                             <h4 className="font-semibold">Analysis Summary</h4>
+                             <FormField
+                                control={form.control}
+                                name="qcEndProblems"
+                                render={({ field }) => (
+                                  <FormItem><FormLabel>Problems encountered/suggested</FormLabel>
+                                    <FormControl><Textarea {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="qcEndImprovement"
+                                render={({ field }) => (
+                                  <FormItem><FormLabel>Improvement</FormLabel>
+                                    <FormControl><Textarea {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.analysedBy"
+                                  render={({ field }) => (
+                                    <FormItem><FormLabel>Analysed By</FormLabel>
+                                      <FormControl><Input {...field} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="qcEndLabelDetails.dateAnalysed"
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Date Analysed</FormLabel>
+                                      <Popover>
+                                        <PopoverTrigger asChild><FormControl>
+                                            <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl></PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                                        </PopoverContent>
+                                      </Popover>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              <FormField
+                                control={form.control}
+                                name="qcEndLabelDetails.releaseForFilling"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                    <FormLabel className="font-normal">Release for filling (yes/no)</FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                          </div>
+                        </div>
+                      </TabsContent>
+                   </Tabs>
                 </TabsContent>
 
-                {/* --- TAB 4: Packaging Used (from Form 3) --- */}
+                {/* --- TAB 4: Packaging Used --- */}
                 <TabsContent value="packaging" className="space-y-4">
+                  {/* (This part is unchanged from last time) */}
                   <div className="space-y-2">
                     {packagingFields.map((item, index) => (
                       <div key={item.id} className="flex gap-4 items-end p-2 border rounded-md">
@@ -485,368 +769,9 @@ export default function LogProductionPage() {
         </form>
       </Form>
       
-      {/* TODO: Add Activity Log Card here, similar to the original page */}
+      {/* This is where the Activity Log card from the original file would go.
+        It's complex and we can add it back later to keep this file focused on the form.
+      */}
     </div>
-  );
-}
-'use client';
-
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { AiSuggestionDialog } from '@/components/production/ai-suggestion-dialog';
-import type { SuggestInventoryUpdateInput } from '@/ai/flows/suggest-inventory-update';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format } from 'date-fns';
-import type { Activity, RawMaterial, Product } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-
-// --- NEW: Firebase & Live Data Imports ---
-import {
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-  useUser,
-} from '@/firebase';
-import {
-  collection,
-  doc,
-  runTransaction,
-  increment,
-  addDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { COLLECTIONS } from '@/services/inventory_service';
-import { users as mockUsers } from '@/lib/data'; // For user names
-
-// Form schema
-const formSchema = z.object({
-  rawMaterialId: z.string().min(1, 'Please select a raw material.'),
-  quantityUsed: z.coerce.number().min(0.1, 'Quantity must be positive.'),
-  productId: z.string().min(1, 'Please select a product.'),
-  quantityProduced: z.coerce.number().min(1, 'Quantity must be at least 1.'),
-});
-type ProductionFormValues = z.infer<typeof formSchema>;
-
-export default function ProductionPage() {
-  const { toast } = useToast();
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
-  const [discrepancyData, setDiscrepancyData] = useState<SuggestInventoryUpdateInput | null>(null);
-
-  // --- NEW: Get Firestore and Auth User ---
-  const firestore = useFirestore();
-  const { user } = useUser(); // For logging activity
-
-  // --- NEW: Fetch Live Data (replaces mock data) ---
-  const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
-  const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
-  // TODO: Create a 'production_activities' collection
-  const activitiesRef = useMemoFirebase(() => collection(firestore, 'production_activities'), [firestore]);
-
-  const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-  const { data: productionActivities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
-
-  const form = useForm<ProductionFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      rawMaterialId: '',
-      quantityUsed: 0,
-      productId: '',
-      quantityProduced: 0,
-    },
-  });
-
-  // --- NEW: Get Form Submission State ---
-  const { isSubmitting } = form.formState;
-
-  // --- UPDATED: onSubmit Function with Firebase Transaction ---
-  async function onSubmit(data: ProductionFormValues) {
-    // TEMPORARY BYPASS: Use a mock user if not logged in
-    const fakeUserId = 'user-3'; // Duncan Mwangi (Production)
-    const currentUserId = user ? user.uid : fakeUserId;
-    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
-
-    if (!currentUser) {
-        toast({ variant: "destructive", title: "Error", description: "Cannot find user data." });
-        return;
-    }
-
-    // Get document references
-    const rawMaterialRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, data.rawMaterialId);
-    const productRef = doc(firestore, COLLECTIONS.PRODUCTS, data.productId);
-    
-    try {
-      // --- This is the Firebase Transaction ---
-      await runTransaction(firestore, async (transaction) => {
-        // 1. Read the current stock levels
-        const materialDoc = await transaction.get(rawMaterialRef);
-        const productDoc = await transaction.get(productRef);
-
-        if (!materialDoc.exists()) {
-          throw new Error("Raw material document not found!");
-        }
-        if (!productDoc.exists()) {
-          throw new Error("Product document not found!");
-        }
-
-        // 2. Check for sufficient stock
-        const currentMaterialQty = materialDoc.data().quantity;
-        if (currentMaterialQty < data.quantityUsed) {
-          // This will cancel the transaction and be caught by the catch block
-          throw new Error(`Not enough stock. Only ${currentMaterialQty} units available.`);
-        }
-
-        // 3. Decrement Raw Material and Increment Product
-        transaction.update(rawMaterialRef, { 
-          quantity: increment(-data.quantityUsed) 
-        });
-        transaction.update(productRef, { 
-          quantity: increment(data.quantityProduced) 
-        });
-      });
-
-      // --- Transaction Successful ---
-
-      // Log this activity
-      try {
-          await addDoc(collection(firestore, 'production_activities'), {
-              user: { name: currentUser.name, avatarUrl: currentUser.avatarUrl },
-              action: `reported a production run of ${data.quantityProduced} ${products?.find(p=>p.id === data.productId)?.name || 'units'}.`,
-              timestamp: serverTimestamp(),
-              details: `Used ${data.quantityUsed} of ${rawMaterials?.find(m=>m.id === data.rawMaterialId)?.name || 'material'}`
-          });
-      } catch (logError) {
-          console.error("Failed to log activity:", logError); // Don't block user for this
-      }
-
-      // --- AI Discrepancy Check (Unchanged from original file) ---
-      const expectedQuantityUsed = data.quantityProduced * 0.5; // Dummy logic
-      const discrepancy = data.quantityUsed - expectedQuantityUsed;
-      const selectedMaterial = rawMaterials?.find(m => m.id === data.rawMaterialId);
-
-      if (Math.abs(discrepancy) > 0.1 && selectedMaterial) {
-        setDiscrepancyData({
-          rawMaterial: selectedMaterial.name,
-          reportedQuantityUsed: data.quantityUsed,
-          expectedQuantityUsed: expectedQuantityUsed,
-          historicalUsageData: 'Normal usage varies by 5-10%.',
-        });
-        setIsAiDialogOpen(true);
-      } else {
-        toast({
-          title: 'Production Logged',
-          description: `Successfully updated stock for ${data.quantityProduced} units.`,
-        });
-      }
-      form.reset();
-
-    } catch (e: any) {
-      // --- Transaction Failed ---
-      console.error("Transaction failed: ", e);
-      toast({
-        variant: "destructive",
-        title: "Transaction Failed",
-        description: e.message || "Could not update stock. Please try again.",
-      });
-    }
-  }
-
-  return (
-    <>
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <div>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">Log Production</h1>
-            <p className="text-muted-foreground">
-              Report raw materials used and finished goods produced.
-            </p>
-          </div>
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Production Entry</CardTitle>
-              <CardDescription>
-                Fill in the details for the latest production run.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* --- UPDATED: Live Data for Raw Materials --- */}
-                    <FormField
-                      control={form.control}
-                      name="rawMaterialId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Raw Material Used</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a material" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {isLoadingMaterials ? (
-                                <SelectItem value="loading" disabled>Loading...</SelectItem>
-                              ) : (
-                                (rawMaterials ?? []).map((material) => (
-                                  <SelectItem key={material.id} value={material.id}>
-                                    {material.name} (Stock: {material.quantity})
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="quantityUsed"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity Used (units/kg/liters)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.1" placeholder="e.g., 10.5" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* --- UPDATED: Live Data for Products --- */}
-                    <FormField
-                      control={form.control}
-                      name="productId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Finished Product</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a product" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {isLoadingProducts ? (
-                                 <SelectItem value="loading" disabled>Loading...</SelectItem>
-                              ) : (
-                                (products ?? []).map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="quantityProduced"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity Produced</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="e.g., 20" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Log Production & Update Stock
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Production Line Log</CardTitle>
-              <CardDescription>Recent production activities.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* --- UPDATED: Live Activity Log --- */}
-              {isLoadingActivities && (
-                <div className="space-y-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              )}
-              {(productionActivities ?? []).length === 0 && !isLoadingActivities && (
-                <p className="text-sm text-muted-foreground">No activities logged yet.</p>
-              )}
-              {(productionActivities ?? []).map((activity: Activity) => {
-                const timestamp = activity.timestamp as any;
-                const displayDate = timestamp?.toDate 
-                  ? format(timestamp.toDate(), "MM/dd/yyyy 'at' h:mm a")
-                  : format(new Date(activity.timestamp), "MM/dd/yyyy 'at' h:mm a");
-                
-                return (
-                <div key={activity.id} className="flex items-start gap-4">
-                  <Avatar className="h-9 w-9 border">
-                    <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
-                    <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="text-sm">
-                    <p className="font-medium text-muted-foreground">
-                      <span className="font-semibold text-foreground">{activity.user.name}</span>
-                      {' '}{activity.action}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {displayDate}
-                    </p>
-                  </div>
-                </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <AiSuggestionDialog
-        open={isAiDialogOpen}
-        onOpenChange={setIsAiDialogOpen}
-        discrepancyData={discrepancyData}
-      />
-    </>
   );
 }
