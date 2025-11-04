@@ -156,7 +156,7 @@ export default function LoginPage() {
           <CardContent className="p-0 flex flex-col md:flex-row">
             
             {/* Left Side (Blue Panel) */}
-            <div className="w-full md:w-2/5 bg-[#096394] text-white p-8 md:p-12 flex flex-col justify-center items-center text-center">
+            <div className="w-full md:w-1/2 bg-[#096394] text-white p-8 md:p-12 flex flex-col justify-center items-center text-center">
               <h2 className="font-headline text-3xl font-bold tracking-tight mb-4">
                 Luna Industries
               </h2>
@@ -174,7 +174,7 @@ export default function LoginPage() {
             </div>
 
             {/* Right Side (Form Panel) */}
-            <div className="w-full md:w-3/5 p-8 md:p-12">
+            <div className="w-full md:w-1/2 p-8 md:p-12">
               <h2 className="font-headline text-3xl font-bold text-center text-[#096394] mb-6">
                 ERP System
               </h2>
