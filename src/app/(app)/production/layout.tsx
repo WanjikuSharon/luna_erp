@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Factory, List, ListChecks } from 'lucide-react'; // Production-related icons
+import { Factory, List, ListChecks, FileText } from 'lucide-react'; // Production-related icons
 
 import { cn } from '@/lib/utils';
 
@@ -15,8 +15,13 @@ const sidebarNavItems = [
     icon: Factory,
   },
   {
+    title: 'QC Reports',
+    href: '/production/history', // QC Reports and Batch History
+    icon: FileText,
+  },
+  {
     title: 'Activity Log',
-    href: '/production/history', // Placeholder for a future page
+    href: '/production/activity', // Placeholder for a future page
     icon: List,
   },
   {
