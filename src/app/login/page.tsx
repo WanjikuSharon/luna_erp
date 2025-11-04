@@ -160,7 +160,10 @@ export default function LoginPage() {
               <h2 className="font-headline text-3xl font-bold tracking-tight mb-4">
                 Luna Industries
               </h2>
-              <div className="relative h-24 w-24 mb-4">
+              <p className="mb-6 text-white/80">
+                Premium Home and Body Care
+              </p>
+              <div className="relative h-40 w-40 mb-4">
                 <Image 
                   src={newLogoUrl} 
                   alt="Luna Industries Logo" 
@@ -168,9 +171,6 @@ export default function LoginPage() {
                   className="object-contain rounded-full" 
                 />
               </div>
-              <p className="mt-2 text-white/80">
-                Premium Home and Body Care
-              </p>
             </div>
 
             {/* Right Side (Form Panel) */}
