@@ -77,46 +77,76 @@ export type Activity = {
   details: string;
 };
 
-// ... (keep ProductionBatch types from previous step) ...
+// --- NEW: Types for Production Batch Flow ---
+
+// From "RAW MATERIALS USED" form
 export type BatchRawMaterial = {
   materialId: string;
   name: string; // For display
   quantity: number;
   weighed: boolean;
 };
+
+// From "Q.C. END PRODUCT ANALYSIS" form
 export type QcAnalysisItem = {
   analysis: string; // e.g., "1. Colour appearance"
   standard: string;
   obtained: string;
 };
+
+// From "PACKAGING MATERIAL AND LABELS USED" form
 export type BatchPackagingMaterial = {
   packagingId: string;
   name: string; // For display
   quantity: number;
 };
+
+// The main document that holds all production data for one batch
 export type ProductionBatch = {
   id: string; // Firestore document ID
+  
+  // From "BATCH MANUFACTURING" form
   productId: string;
   productName: string; // For display
   dateOfMfg: any; // Firestore Timestamp
   batchNumber: string;
   batchSize: number;
   mfRef: string; // "M.F. Ref" from form
+  
+  // Array of materials from Form 1
   rawMaterialsUsed: BatchRawMaterial[];
+
+  // NEW: QC Data, split into two parts
   qcRawMaterialChecks: {
-    sealsOk: boolean,
-    weightOk: boolean,
-    materialOk: boolean,
+    sealsOk: boolean;
+    weightOk: boolean;
+    materialOk: boolean;
   };
   qcEndProductAnalysis: {
-    labelDetails: any,
-    analysisItems: QcAnalysisItem[],
-    problems: string,
-    improvement: string,
+    labelDetails: { // Label Details from Form 2
+      dateOfMfg: any; // Firestore Timestamp
+      expDate: any; // Firestore Timestamp
+      batchNo: string;
+      stocked: boolean;
+      batchSheet: string;
+      yield: string;
+      expectedYield: string;
+      percentYield: string;
+      analysedBy: string;
+      dateAnalysed: any; // Firestore Timestamp
+      releaseForFilling: boolean;
+    };
+    analysisItems: QcAnalysisItem[];
+    problems: string;
+    improvement: string;
   };
+
+  // Array of materials from Form 3
   packagingUsed: BatchPackagingMaterial[];
+
+  // ERP System Fields
   status: 'Pending_QC' | 'Pending_Packaging' | 'Completed' | 'Rejected';
   createdBy: string; // User UID
-  createdByName: string;
+  createdByName: string; // For display
   createdAt: any; // Firestore Timestamp
 };
