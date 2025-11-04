@@ -3,21 +3,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ClipboardList, Recycle } from 'lucide-react'; // Import icons
+import { LayoutDashboard, ClipboardList, Recycle, PackageSearch } from 'lucide-react'; // Import icons
 
 import { cn } from '@/lib/utils';
 
-// Define the navigation items for the Operations sidebar
+// UPDATED: Sidebar navigation
 const sidebarNavItems = [
   {
     title: 'Overview',
-    href: '/operations/overview', // Changed from '/operations'
+    href: '/operations/overview',
     icon: LayoutDashboard,
   },
   {
-    title: 'Vendors & Materials', // <<< CHANGED TITLE HERE
+    title: 'Vendors & Materials', // NEW
     href: '/operations/inventory',
-    icon: ClipboardList, // Icon is fine, represents inventory/lists
+    icon: PackageSearch, // Use a more fitting icon
+  },
+  {
+    title: 'Requests List', // RENAMED
+    href: '/operations/requests',
+    icon: ClipboardList,
   },
   {
     title: 'Reconciliation',
@@ -37,19 +42,24 @@ export default function OperationsLayout({ children }: { children: React.ReactNo
           <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight font-headline">
             Operations Menu
           </h2>
-          {sidebarNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                pathname === item.href && 'bg-muted text-primary' // Highlight active link
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.title}
-            </Link>
-          ))}
+          {sidebarNavItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                  // Make 'Overview' active when on /operations too
+                  (isActive || (item.href === '/operations/overview' && pathname === '/operations')) && 'bg-muted text-primary'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
