@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form'; // NEW: Import useFieldArray and Controller
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -30,16 +30,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox'; // NEW
+import { Textarea } from '@/components/ui/textarea'; // NEW
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // NEW
+import { Calendar } from '@/components/ui/calendar'; // NEW
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // NEW
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import type { RawMaterial, Product } from '@/lib/types';
-import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
+import type { RawMaterial, Product } from '@/lib/types'; // Import main types
+import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react'; // NEW Icons
 import { cn } from '@/lib/utils';
+
+// NEW: Firebase & Live Data Imports
 import {
   useFirestore,
   useCollection,
@@ -75,14 +77,14 @@ const qcAnalysisTemplate = [
 
 // --- UPDATED: Zod Schema with all QC fields ---
 const batchFormSchema = z.object({
-  // Tab 1: Batch Details
+  // Tab 1: Batch Details (from Form 3)
   productId: z.string().min(1, 'Please select a product.'),
   dateOfMfg: z.date({ required_error: 'Date of manufacture is required.' }),
   batchNumber: z.string().min(1, 'Batch number is required.'),
   batchSize: z.coerce.number().min(1, 'Batch size must be at least 1.'),
   mfRef: z.string().optional(),
 
-  // Tab 2: Raw Materials Used
+  // Tab 2: Raw Materials Used (from Form 1)
   rawMaterialsUsed: z.array(z.object({
     materialId: z.string().min(1, 'Select a material'),
     quantity: z.coerce.number().min(0.01, 'Qty > 0'),
@@ -132,10 +134,16 @@ export default function LogProductionPage() {
   // --- Data Fetching ---
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
+  // TODO: Create a 'packaging_materials' collection in Firestore
+  // const packagingRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PACKAGING), [firestore]);
+
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+  // Using mock packaging data for now
   const packagingMaterials = MOCK_PACKAGING;
   const isLoadingPackaging = false;
+  // const { data: packagingMaterials, isLoading: isLoadingPackaging } = useCollection<PackagingMaterial>(packagingRef);
+
   const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging;
 
   // --- Form Setup ---
@@ -186,28 +194,29 @@ export default function LogProductionPage() {
 
   // --- onSubmit Function ---
   async function onSubmit(data: BatchFormValues) {
-    const fakeUserId = 'user-3';
+    const fakeUserId = 'user-3'; // TEMPORARY BYPASS
     const currentUserId = user ? user.uid : fakeUserId;
     const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
 
     try {
+      // --- This is the Firebase Transaction ---
       await runTransaction(firestore, async (transaction) => {
-        // 1. Decrement Raw Materials
+        console.log("Starting transaction...");
+
+        // 1. Decrement ALL Raw Materials
         for (const material of data.rawMaterialsUsed) {
           const matRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, material.materialId);
           const matDoc = await transaction.get(matRef);
-          if (!matDoc.exists()) {
-            throw new Error(`Raw material not found: ${material.materialId}`);
-          }
-          const matData = matDoc.data();
-          if (matData.quantity < material.quantity) {
-            throw new Error(`Not enough stock for ${matData.name || material.materialId}`);
+          if (!matDoc.exists() || matDoc.data().quantity < material.quantity) {
+            throw new Error(`Not enough stock for ${matDoc.data().name || material.materialId}`);
           }
           transaction.update(matRef, { quantity: increment(-material.quantity) });
         }
+        console.log("Raw materials debited.");
 
-        // 2. Decrement Packaging Materials (Simulated logic, replace with real transaction.get)
+        // 2. Decrement ALL Packaging Materials (Simulated logic, replace with real transaction.get)
         for (const item of data.packagingUsed) {
+          // TODO: Replace MOCK_PACKAGING with live data check
           const pkgItem = packagingMaterials.find(p => p.id === item.packagingId);
           if (!pkgItem || pkgItem.quantity < item.quantity) {
              throw new Error(`Not enough stock for ${pkgItem?.name || item.packagingId}`);
@@ -220,12 +229,14 @@ export default function LogProductionPage() {
           // transaction.update(pkgRef, { quantity: increment(-item.quantity) });
           console.log(`(Simulated) Debiting ${item.quantity} of ${pkgItem.name}`);
         }
+        console.log("Packaging materials debited.");
 
-        // 3. Increment Finished Product
+        // 3. Increment ONE Finished Product
         const prodRef = doc(firestore, COLLECTIONS.PRODUCTS, data.productId);
         transaction.update(prodRef, { 
           quantity: increment(data.batchSize) 
         });
+        console.log("Finished product credited.");
 
         // 4. Create the Batch Manufacturing Record
         const batchRef = doc(collection(firestore, 'production_batches'));
@@ -316,10 +327,10 @@ export default function LogProductionPage() {
                   <TabsTrigger value="packaging">4. Packaging Used</TabsTrigger>
                 </TabsList>
 
-                {/* --- TAB 1: Batch Details --- */}
+                {/* --- TAB 1: Batch Details (from Form 3) --- */}
                 <TabsContent value="batch" className="space-y-4">
                   {/* (This part is unchanged from last time) */}
-                  <FormField
+                   <FormField
                     control={form.control}
                     name="productId"
                     render={({ field }) => (
@@ -348,11 +359,7 @@ export default function LogProductionPage() {
                               <FormControl>
                                 <Button
                                   variant={"outline"}
-                                  className={cn(
-                                    "pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
+                                  className={cn("pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
                                   {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
@@ -399,7 +406,7 @@ export default function LogProductionPage() {
                   />
                 </TabsContent>
 
-                {/* --- TAB 2: Raw Materials Used --- */}
+                {/* --- TAB 2: Raw Materials Used (from Form 1) --- */}
                 <TabsContent value="materials" className="space-y-4">
                   {/* (This part is unchanged from last time) */}
                   <div className="space-y-2">
@@ -458,7 +465,6 @@ export default function LogProductionPage() {
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Material
                   </Button>
                 </TabsContent>
-                
                 
                 {/* --- TAB 3: Quality Control (with Nested Tabs) --- */}
                 <TabsContent value="qc" className="space-y-4">
@@ -613,7 +619,7 @@ export default function LogProductionPage() {
                             <h4 className="font-semibold">Analysis</h4>
                             {qcAnalysisFields.map((item, index) => (
                                 <div key={item.id} className="grid grid-cols-12 gap-2 items-center py-1">
-                                    <label className="col-span-3 text-xs">{item.analysis}</label>
+                                    <Label className="col-span-3 text-xs">{item.analysis}</Label>
                                     <FormField
                                       control={form.control}
                                       name={`qcEndAnalysisItems.${index}.standard`}
@@ -709,7 +715,7 @@ export default function LogProductionPage() {
                    </Tabs>
                 </TabsContent>
 
-                {/* --- TAB 4: Packaging Used --- */}
+                {/* --- TAB 4: Packaging Used (from Form 3) --- */}
                 <TabsContent value="packaging" className="space-y-4">
                   {/* (This part is unchanged from last time) */}
                   <div className="space-y-2">
@@ -769,8 +775,10 @@ export default function LogProductionPage() {
         </form>
       </Form>
       
-      {/* This is where the Activity Log card from the original file would go.
-        It's complex and we can add it back later to keep this file focused on the form.
+      {/* This is where the original "Production Line Log" Card was.
+        We can create a new component for it and add it here,
+        or build it into the `/production/history` page.
+        For now, I've removed it to focus on the main form.
       */}
     </div>
   );
