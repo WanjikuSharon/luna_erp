@@ -46,10 +46,11 @@ const MOCK_VENDORS: Vendor[] = [
 ];
 
 // UPDATED: RequestRow to show all new info
-function RequestRow({ request, materialNameMap, vendorNameMap }: {
+function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: {
   request: MaterialRequest,
   materialNameMap: Record<string, string>,
-  vendorNameMap: Record<string, string>
+  vendorNameMap: Record<string, string>,
+  onVerifyClick: (request: MaterialRequest) => void;
 }) {
   const requester = mockUsers.find(u => u.id === request.requestedBy); // Still mock users
   const status = statusConfig[request.status];
@@ -71,8 +72,26 @@ function RequestRow({ request, materialNameMap, vendorNameMap }: {
       <TableCell className="text-right text-muted-foreground">
         {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
       </TableCell>
+      {/* UPDATED: This cell now shows different buttons based on status */}
       <TableCell className="text-right">
-        <Button variant="outline" size="sm">View</Button>
+        {request.status === 'pending' && (
+          <Button variant="outline" size="sm" onClick={() => onVerifyClick(request)}>
+            Verify Delivery
+          </Button>
+        )}
+        {request.status === 'delivered' && request.deliveryNoteUrl && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={request.deliveryNoteUrl} target="_blank" rel="noopener noreferrer">
+              <FileCheck className="mr-2 h-4 w-4" />
+              View Note
+            </a>
+          </Button>
+        )}
+        {(request.status === 'approved' || request.status === 'rejected') && (
+          <Button variant="ghost" size="sm" disabled>
+            {request.status}
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -113,6 +132,9 @@ function RequestTableSkeleton() {
 export default function RequestsPage() {
   const allStatuses = Object.keys(statusConfig) as (keyof typeof statusConfig)[];
   const firestore = useFirestore();
+
+  // NEW: Add state to control the dialog
+  const [verifyingRequest, setVerifyingRequest] = useState<MaterialRequest | null>(null);
 
   // --- Data Fetching ---
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
@@ -184,7 +206,13 @@ export default function RequestsPage() {
                   </TableHeader>
                   <TableBody>
                     {(materialRequests ?? []).map(req => (
-                      <RequestRow key={req.id} request={req} materialNameMap={materialNameMap} vendorNameMap={vendorNameMap} />
+                      <RequestRow 
+                        key={req.id} 
+                        request={req} 
+                        materialNameMap={materialNameMap} 
+                        vendorNameMap={vendorNameMap}
+                        onVerifyClick={setVerifyingRequest}
+                      />
                     ))}
                   </TableBody>
                 </Table>
