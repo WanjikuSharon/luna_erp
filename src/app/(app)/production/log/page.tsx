@@ -22,8 +22,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -41,7 +41,6 @@ import { format } from 'date-fns';
 import type { RawMaterial, Product } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 import {
   useFirestore,
   useCollection,
@@ -184,41 +183,55 @@ export default function LogProductionPage() {
       await runTransaction(firestore, async (transaction) => {
         console.log("Starting transaction...");
 
-        // 1. Decrement ALL Raw Materials (Unchanged)
+        // ===== PHASE 1: READ ALL DOCUMENTS FIRST =====
+        
+        // 1a. Read ALL Raw Materials
+        const rawMaterialDocs = [];
         for (const material of data.rawMaterialsUsed) {
           const matRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, material.materialId);
           const matDoc = await transaction.get(matRef);
           if (!matDoc.exists() || matDoc.data().quantity < material.quantity) {
-            throw new Error(`Not enough stock for ${matDoc.data().name || material.materialId}`);
+            throw new Error(`Not enough stock for ${matDoc.data()?.name || material.materialId}`);
           }
-          transaction.update(matRef, { quantity: increment(-material.quantity) });
+          rawMaterialDocs.push({ ref: matRef, material });
         }
-        console.log("Raw materials debited.");
+        console.log("Raw materials validated.");
 
-        // 2. UPDATED: Decrement ALL Packaging Materials (Now uses live data)
-        console.log("Checking and debiting packaging materials...");
+        // 1b. Read ALL Packaging Materials
+        const packagingDocs = [];
         for (const item of data.packagingUsed) {
           const pkgRef = doc(firestore, COLLECTIONS.PACKAGING, item.packagingId);
-          // This is now a real database read inside the transaction
           const pkgDoc = await transaction.get(pkgRef);
           
           if (!pkgDoc.exists() || pkgDoc.data().quantity < item.quantity) {
-            throw new Error(`Not enough stock for ${pkgDoc.data().name || item.packagingId}`);
+            throw new Error(`Not enough stock for ${pkgDoc.data()?.name || item.packagingId}`);
           }
-          // This is now a real database update
-          transaction.update(pkgRef, { quantity: increment(-item.quantity) });
+          packagingDocs.push({ ref: pkgRef, item });
+        }
+        console.log("Packaging materials validated.");
+
+        // ===== PHASE 2: WRITE ALL DOCUMENTS =====
+        
+        // 2a. Decrement ALL Raw Materials
+        for (const { ref, material } of rawMaterialDocs) {
+          transaction.update(ref, { quantity: increment(-material.quantity) });
+        }
+        console.log("Raw materials debited.");
+
+        // 2b. Decrement ALL Packaging Materials
+        for (const { ref, item } of packagingDocs) {
+          transaction.update(ref, { quantity: increment(-item.quantity) });
         }
         console.log("Packaging materials debited.");
 
-
-        // 3. Increment ONE Finished Product (Unchanged)
+        // 2c. Increment ONE Finished Product
         const prodRef = doc(firestore, COLLECTIONS.PRODUCTS, data.productId);
         transaction.update(prodRef, { 
           quantity: increment(data.batchSize) 
         });
         console.log("Finished product credited.");
 
-        // 4. Create the Batch Manufacturing Record (Unchanged)
+        // 2d. Create the Batch Manufacturing Record
         const batchRef = doc(collection(firestore, 'production_batches'));
         
         const productName = products?.find(p => p.id === data.productId)?.name || 'Unknown Product';
