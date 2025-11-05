@@ -28,6 +28,7 @@ import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data'; // For user names
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
+import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDialog';
 
 // Status config remains the same
 const statusConfig = {
