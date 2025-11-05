@@ -83,6 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               variant="outline"
               size="icon"
               className="shrink-0 md:hidden"
+              suppressHydrationWarning
             >
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle navigation menu</span>
