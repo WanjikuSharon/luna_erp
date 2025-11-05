@@ -38,9 +38,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import type { RawMaterial, Product } from '@/lib/types';
+// UPDATED: Import ProductRecipe type
+import type { RawMaterial, Product, PackagingMaterial, ProductRecipe } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 import {
   useFirestore,
   useCollection,
@@ -54,14 +56,14 @@ import {
   increment,
   addDoc,
   serverTimestamp,
+  getDoc, // UPDATED: Import getDoc to fetch the recipe
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { users as mockUsers } from '@/lib/data';
 
-// UPDATED: Import PackagingMaterial type
-import type { PackagingMaterial } from '@/lib/types';
-
-// UPDATED: MOCK_PACKAGING array is now DELETED
+// UPDATED: Import the AI dialog and flow
+import { AiSuggestionDialog } from '@/components/production/ai-suggestion-dialog';
+import { suggestInventoryUpdate, type SuggestInventoryUpdateInput } from '@/ai/flows/suggest-inventory-update';
 
 // QC Analysis Items (Unchanged)
 const qcAnalysisTemplate = [
@@ -118,15 +120,17 @@ export default function LogProductionPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  // --- UPDATED: Fetch Live Data for all dropdowns ---
+  // --- UPDATED: Add state for the AI Dialog ---
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [discrepancyData, setDiscrepancyData] = useState<SuggestInventoryUpdateInput | null>(null);
+
+  // --- Data Fetching (Unchanged) ---
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
-  // UPDATED: Fetch live packaging materials
   const packagingRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PACKAGING), [firestore]);
 
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-  // UPDATED: Use live packaging materials
   const { data: packagingMaterials, isLoading: isLoadingPackaging } = useCollection<PackagingMaterial>(packagingRef);
 
   const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging;
@@ -172,20 +176,16 @@ export default function LogProductionPage() {
     name: "packagingUsed",
   });
 
-  // --- UPDATED: onSubmit Function with Full Batch Transaction ---
+  // --- UPDATED: onSubmit Function ---
   async function onSubmit(data: BatchFormValues) {
-    const fakeUserId = 'user-3'; // TEMPORARY BYPASS
+    const fakeUserId = 'user-3';
     const currentUserId = user ? user.uid : fakeUserId;
     const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
 
+    // --- 1. Run the Inventory Transaction (Unchanged) ---
     try {
-      // --- This is the Firebase Transaction ---
       await runTransaction(firestore, async (transaction) => {
-        console.log("Starting transaction...");
-
-        // ===== PHASE 1: READ ALL DOCUMENTS FIRST =====
-        
-        // 1a. Read ALL Raw Materials
+        // (Decrement Raw Materials logic - unchanged)
         const rawMaterialDocs = [];
         for (const material of data.rawMaterialsUsed) {
           const matRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, material.materialId);
@@ -195,50 +195,37 @@ export default function LogProductionPage() {
           }
           rawMaterialDocs.push({ ref: matRef, material });
         }
-        console.log("Raw materials validated.");
-
-        // 1b. Read ALL Packaging Materials
+        
+        // (Decrement Packaging Materials logic - unchanged)
         const packagingDocs = [];
         for (const item of data.packagingUsed) {
           const pkgRef = doc(firestore, COLLECTIONS.PACKAGING, item.packagingId);
           const pkgDoc = await transaction.get(pkgRef);
-          
           if (!pkgDoc.exists() || pkgDoc.data().quantity < item.quantity) {
             throw new Error(`Not enough stock for ${pkgDoc.data()?.name || item.packagingId}`);
           }
           packagingDocs.push({ ref: pkgRef, item });
         }
-        console.log("Packaging materials validated.");
 
-        // ===== PHASE 2: WRITE ALL DOCUMENTS =====
-        
-        // 2a. Decrement ALL Raw Materials
+        // Decrement ALL Raw Materials
         for (const { ref, material } of rawMaterialDocs) {
           transaction.update(ref, { quantity: increment(-material.quantity) });
         }
-        console.log("Raw materials debited.");
 
-        // 2b. Decrement ALL Packaging Materials
+        // Decrement ALL Packaging Materials
         for (const { ref, item } of packagingDocs) {
           transaction.update(ref, { quantity: increment(-item.quantity) });
         }
-        console.log("Packaging materials debited.");
 
-        // 2c. Increment ONE Finished Product
+        // (Increment Product logic - unchanged)
         const prodRef = doc(firestore, COLLECTIONS.PRODUCTS, data.productId);
-        transaction.update(prodRef, { 
-          quantity: increment(data.batchSize) 
-        });
-        console.log("Finished product credited.");
+        transaction.update(prodRef, { quantity: increment(data.batchSize) });
 
-        // 2d. Create the Batch Manufacturing Record
+        // (Create Batch Record logic - unchanged)
         const batchRef = doc(collection(firestore, 'production_batches'));
-        
         const productName = products?.find(p => p.id === data.productId)?.name || 'Unknown Product';
         const rawMaterialsUsedWithNames = data.rawMaterialsUsed.map(m => ({...m, name: rawMaterials?.find(rm => rm.id === m.materialId)?.name || 'Unknown'}));
-        // UPDATED: This now uses the live 'packagingMaterials' variable
         const packagingUsedWithNames = data.packagingUsed.map(p => ({...p, name: packagingMaterials?.find(pm => pm.id === p.packagingId)?.name || 'Unknown'}));
-
         const newBatchData = {
           productId: data.productId,
           productName: productName,
@@ -267,15 +254,61 @@ export default function LogProductionPage() {
           createdByName: currentUser?.name || 'Unknown User',
           createdAt: serverTimestamp(),
         };
-        
         transaction.set(batchRef, newBatchData);
       });
 
-      // --- Transaction Successful ---
-      toast({
-        title: 'Production Logged Successfully',
-        description: `Batch ${data.batchNumber} created and stock updated.`,
-      });
+      // --- 2. Transaction Successful: Check for Discrepancies ---
+      console.log('Transaction successful. Checking for discrepancies...');
+      let discrepancyFound = false;
+
+      // Fetch the recipe for the product
+      const recipeRef = doc(firestore, 'product_recipes', data.productId);
+      const recipeSnap = await getDoc(recipeRef);
+
+      if (!recipeSnap.exists()) {
+        // No recipe found, so we can't check. Just show success.
+        console.warn(`No recipe found for product ${data.productId}. Skipping discrepancy check.`);
+      } else {
+        const recipe = recipeSnap.data() as Omit<ProductRecipe, 'id'>;
+        
+        // Loop over all raw materials the user said they used
+        for (const usedMaterial of data.rawMaterialsUsed) {
+          // Find this material in the recipe
+          const recipeMaterial = recipe.materials.find(m => m.materialId === usedMaterial.materialId);
+          
+          if (!recipeMaterial) continue; // Material isn't in the recipe, skip check
+
+          // Calculate what *should* have been used
+          const expectedQuantityUsed = recipeMaterial.quantity * data.batchSize;
+          const reportedQuantityUsed = usedMaterial.quantity;
+
+          // Check for a significant discrepancy (e.g., more than 1% difference)
+          if (Math.abs(reportedQuantityUsed - expectedQuantityUsed) / expectedQuantityUsed > 0.01) {
+            console.log(`Discrepancy found for ${usedMaterial.materialId}!`);
+            const materialName = rawMaterials?.find(rm => rm.id === usedMaterial.materialId)?.name || 'Unknown Material';
+            
+            // Set the data for the AI dialog
+            setDiscrepancyData({
+              rawMaterial: materialName,
+              reportedQuantityUsed: reportedQuantityUsed,
+              expectedQuantityUsed: expectedQuantityUsed,
+              // We can make this historical data better later
+              historicalUsageData: 'Recent batches have shown consistent usage.',
+            });
+            setIsAiDialogOpen(true); // Open the AI dialog
+            discrepancyFound = true;
+            break; // Stop checking after the first discrepancy is found
+          }
+        }
+      }
+
+      // If no discrepancy was found, show the normal success toast
+      if (!discrepancyFound) {
+        toast({
+          title: 'Production Logged Successfully',
+          description: `Batch ${data.batchNumber} created and stock updated.`,
+        });
+      }
       form.reset();
 
     } catch (e: any) {
@@ -289,15 +322,16 @@ export default function LogProductionPage() {
     }
   }
 
-  // --- Main Render (Only Tab 4 is updated) ---
+  // --- Main Render (UPDATED) ---
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Batch Manufacturing Record</h1>
-        <p className="text-muted-foreground">
-          Log all details for a new production batch, from raw materials to final packaging.
-        </p>
-      </div>
+    <> {/* UPDATED: Wrap in fragment */}
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Batch Manufacturing Record</h1>
+          <p className="text-muted-foreground">
+            Log all details for a new production batch, from raw materials to final packaging.
+          </p>
+        </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -315,9 +349,8 @@ export default function LogProductionPage() {
                   <TabsTrigger value="packaging">4. Packaging Used</TabsTrigger>
                 </TabsList>
 
-                {/* --- TAB 1: Batch Details (Unchanged) --- */}
+                {/* --- TAB 1: Batch Details --- */}
                 <TabsContent value="batch" className="space-y-4">
-                  {/* (Omitted for brevity) */}
                   <FormField control={form.control} name="productId" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Finished Product</FormLabel>
@@ -379,9 +412,8 @@ export default function LogProductionPage() {
                   />
                 </TabsContent>
 
-                {/* --- TAB 2: Raw Materials Used (Unchanged) --- */}
+                {/* --- TAB 2: Raw Materials Used --- */}
                 <TabsContent value="materials" className="space-y-4">
-                  {/* (Omitted for brevity) */}
                   <div className="space-y-2">
                     {rawMaterialFields.map((item, index) => (
                       <div key={item.id} className="flex gap-4 items-end p-2 border rounded-md">
@@ -430,9 +462,8 @@ export default function LogProductionPage() {
                   </Button>
                 </TabsContent>
                 
-                {/* --- TAB 3: Quality Control (Unchanged) --- */}
+                {/* --- TAB 3: Quality Control --- */}
                 <TabsContent value="qc" className="space-y-4">
-                   {/* (Omitted for brevity) */}
                    <CardDescription>
                       Log all quality control checks for raw materials and the final product.
                    </CardDescription>
@@ -617,7 +648,7 @@ export default function LogProductionPage() {
                    </Tabs>
                 </TabsContent>
 
-                {/* --- TAB 4: Packaging Used (UPDATED) --- */}
+                {/* --- TAB 4: Packaging Used --- */}
                 <TabsContent value="packaging" className="space-y-4">
                   <div className="space-y-2">
                     {packagingFields.map((item, index) => (
@@ -631,7 +662,6 @@ export default function LogProductionPage() {
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select item..." /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {/* UPDATED: This now uses live, loading data */}
                                   {isLoadingPackaging ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
                                   (packagingMaterials ?? []).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} (Stock: {m.quantity})</SelectItem>)}
                                 </SelectContent>
@@ -676,6 +706,14 @@ export default function LogProductionPage() {
           </Button>
         </form>
       </Form>
-    </div>
+      </div>
+
+      {/* --- UPDATED: Add the AI Suggestion Dialog --- */}
+      <AiSuggestionDialog
+        open={isAiDialogOpen}
+        onOpenChange={setIsAiDialogOpen}
+        discrepancyData={discrepancyData}
+      />
+    </>
   );
 }
