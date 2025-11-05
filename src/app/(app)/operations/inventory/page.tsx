@@ -762,8 +762,7 @@ function EditVendorDialog({
   );
 }
 
-// --- DeleteVendorAlert Component (Unchanged) ---
-// (Omitted for brevity)
+// --- DeleteVendorAlert Component ---
 function DeleteVendorAlert({
   vendor,
   onOpenChange,
@@ -940,7 +939,7 @@ function EditMaterialDialog({
   );
 }
 
-// --- UPDATED: New DeleteMaterialAlert Component ---
+// --- DeleteMaterialAlert Component ---
 function DeleteMaterialAlert({
   material,
   onOpenChange,
