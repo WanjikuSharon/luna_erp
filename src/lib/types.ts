@@ -64,6 +64,7 @@ export type MaterialRequest = {
   status: 'pending' | 'approved' | 'delivered' | 'rejected';
   createdAt: any; // For Firestore Timestamp
   updatedAt: any; // For Firestore Timestamp
+  deliveryNoteUrl?: string; // URL to the delivery note stored in Cloudinary
 };
 
 export type Activity = {
