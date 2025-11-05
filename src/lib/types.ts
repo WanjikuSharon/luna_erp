@@ -151,3 +151,14 @@ export type ProductionBatch = {
   createdByName: string; // For display
   createdAt: any; // Firestore Timestamp
 };
+
+// --- NEW: Types for Product Recipes (Bill of Materials) ---
+export type RecipeMaterial = {
+  materialId: string;
+  quantity: number; // Quantity of raw material needed to make ONE unit of the finished product
+};
+
+export type ProductRecipe = {
+  id: string; // This will be the same as the Product ID
+  materials: RecipeMaterial[];
+};
