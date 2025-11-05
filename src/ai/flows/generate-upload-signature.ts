@@ -1,7 +1,8 @@
 // src/ai/flows/generate-upload-signature.ts
 'use server';
 
-import { defineFlow, action, z } from 'genkit-ai/core';
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 import { v2 as cloudinary } from 'cloudinary'; // Import the SDK
 
 // Get Cloudinary credentials from .env.local
@@ -24,7 +25,7 @@ cloudinary.config({
   secure: true,
 });
 
-export const generateUploadSignature = defineFlow(
+export const generateUploadSignature = ai.defineFlow(
   {
     name: 'generateUploadSignature',
     inputSchema: z.object({}), // No input needed
