@@ -1,4 +1,4 @@
-// Moved from src/app/(app)/operations/page.tsx
+// src/app/(app)/operations/overview/page.tsx
 'use client';
 
 import { useMemo } from 'react';
@@ -7,302 +7,188 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
+  CardDescription
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Package, AlertTriangle, DollarSign, TrendingUp } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { RawMaterial } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DollarSign, Warehouse, Package, Truck, Loader2 } from 'lucide-react';
+import type { Activity, RawMaterial, MaterialRequest } from '@/lib/types';
+import { format, isToday } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Activity type (keeping from previous implementation)
-type Activity = {
-  id: string;
-  user: string;
-  action: string;
-  timestamp: any; // Firestore Timestamp
-  details?: string;
-};
+// NEW: Import Firebase hooks and services
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { COLLECTIONS } from '@/services/inventory_service';
 
-// Stat Card Component
-function StatCard({ title, value, description, icon: Icon, trend }: {
-  title: string;
-  value: string | number;
-  description: string;
-  icon: React.ElementType;
-  trend?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-        {trend && (
-          <div className="mt-2 flex items-center text-xs text-green-600">
-            <TrendingUp className="mr-1 h-3 w-3" />
-            {trend}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
-// Skeleton for stat cards
-function StatCardSkeleton() {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-4 w-4 rounded" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-8 w-20 mb-2" />
-        <Skeleton className="h-3 w-32" />
-      </CardContent>
-    </Card>
-  );
-}
-
-// Inventory Table Skeleton
-function InventoryTableSkeleton() {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Material</TableHead>
-          <TableHead className="text-center">Current Stock</TableHead>
-          <TableHead className="text-center">Reorder Level</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Unit Price</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
-            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-// Activity Table Skeleton
-function ActivityTableSkeleton() {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>User</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>Details</TableHead>
-          <TableHead className="text-right">Time</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-export default function OperationsPage() {
+export default function OperationsDashboardPage() {
   const firestore = useFirestore();
 
-  // Firestore references
-  const rawMaterialsRef = useMemoFirebase(() => collection(firestore, 'raw_materials'), [firestore]);
-  const activitiesRef = useMemoFirebase(() => collection(firestore, 'operationsActivities'), [firestore]);
+  // --- NEW: Fetch Live Data ---
+  // Fetch all raw materials for inventory cards
+  const materialsRef = useMemoFirebase(
+    () => collection(firestore, COLLECTIONS.RAW_MATERIALS), 
+    [firestore]
+  );
+  const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(materialsRef);
 
-  // Fetch data
-  const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
-  const { data: activities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
+  // Fetch all material requests for request-related cards
+  const requestsRef = useMemoFirebase(
+    () => collection(firestore, COLLECTIONS.REQUESTS), 
+    [firestore]
+  );
+  const { data: materialRequests, isLoading: isLoadingRequests } = useCollection<MaterialRequest>(requestsRef);
 
-  // Calculate metrics
-  const totalMaterials = rawMaterials?.length ?? 0;
-  const lowStockItems = useMemo(() => {
-    return (rawMaterials ?? []).filter(m => m.quantity <= m.reorderPoint).length;
-  }, [rawMaterials]);
+  // Fetch all activities, ordered by newest first
+  const activitiesRef = useMemoFirebase(
+    () => query(collection(firestore, 'operations_activities'), orderBy('timestamp', 'desc')), 
+    [firestore]
+  );
+  const { data: operationsActivities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
 
-  const inventoryValue = useMemo(() => {
-    // Using a placeholder price since unitPrice doesn't exist in type yet
-    return (rawMaterials ?? []).reduce((sum, m) => sum + (m.quantity * 10), 0);
-  }, [rawMaterials]);
+  // Combined loading state
+  const isLoading = isLoadingMaterials || isLoadingRequests || isLoadingActivities;
 
+  // --- NEW: Calculate Dashboard Stats ---
+  const dashboardStats = useMemo(() => {
+    const materials = rawMaterials || [];
+    const requests = materialRequests || [];
+
+    // 1. Total Inventory Value (using dummy price of $5 per unit)
+    //    We can update this later if you add a 'price' field to your materials.
+    const inventoryValue = materials.reduce((acc, item) => acc + (item.quantity * 5), 0);
+    
+    // 2. Low Stock Items
+    const lowStockItems = materials.filter(m => m.quantity < m.reorderPoint).length;
+
+    // 3. Pending Requests
+    const pendingRequests = requests.filter(r => r.status === 'pending').length;
+
+    // 4. Deliveries Today
+    //    We'll assume a "delivery today" is a request that was
+    //    set to 'delivered' status today.
+    const deliveriesToday = requests.filter(r => {
+        if (r.status === 'delivered' && r.updatedAt?.toDate) {
+            return isToday(r.updatedAt.toDate());
+        }
+        return false;
+    }).length;
+
+    return { inventoryValue, lowStockItems, pendingRequests, deliveriesToday };
+  }, [rawMaterials, materialRequests]);
+  
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Operations Dashboard</h1>
-        <p className="text-muted-foreground">
-          Monitor inventory levels and manage stock operations.
-        </p>
+      <div className="space-y-1.5">
+        <h1 className="text-2xl font-bold font-headline tracking-tight md:text-3xl">
+          Operations Dashboard
+        </h1>
+        <p className="text-muted-foreground">Here's a summary of your operations today.</p>
       </div>
-
-      {/* Stats Grid */}
+      
+      {/* --- UPDATED: Summary Cards --- */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {isLoadingMaterials ? (
-          <>
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </>
-        ) : (
-          <>
-            <StatCard
-              title="Total Materials"
-              value={totalMaterials}
-              description="Active inventory items"
-              icon={Package}
-              trend="+2 this month"
-            />
-            <StatCard
-              title="Low Stock Alerts"
-              value={lowStockItems}
-              description="Items below reorder level"
-              icon={AlertTriangle}
-            />
-            <StatCard
-              title="Inventory Value"
-              value={`KES ${inventoryValue.toLocaleString()}`}
-              description="Total stock value"
-              icon={DollarSign}
-              trend="+12% from last month"
-            />
-            <StatCard
-              title="Pending Requests"
-              value={0}
-              description="Awaiting approval"
-              icon={Package}
-            />
-          </>
-        )}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <div className="text-2xl font-bold">
+                ${dashboardStats.inventoryValue.toLocaleString()}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Based on current stock</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <Warehouse className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{dashboardStats.lowStockItems}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Items needing reorder</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{dashboardStats.pendingRequests}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Deliveries Today</CardTitle>
+            <Truck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{dashboardStats.deliveriesToday}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Marked as delivered today</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Inventory Table */}
+      {/* --- UPDATED: Operations Log --- */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Inventory</CardTitle>
-          <CardDescription>
-            Real-time view of raw material stock levels.
-          </CardDescription>
+          <CardTitle>Operations Log</CardTitle>
+          <CardDescription>A log of recent inventory and request activities.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingMaterials ? (
-            <InventoryTableSkeleton />
-          ) : (rawMaterials ?? []).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No materials found. Add materials to get started.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-center">Current Stock</TableHead>
-                  <TableHead className="text-center">Reorder Level</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(rawMaterials ?? []).map((material) => {
-                  const isLowStock = material.quantity <= material.reorderPoint;
-                  return (
-                    <TableRow key={material.id}>
-                      <TableCell className="font-medium">{material.name}</TableCell>
-                      <TableCell className="text-center">
-                        {material.quantity} {material.unit}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {material.reorderPoint} {material.unit}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={isLowStock ? 'destructive' : 'secondary'}>
-                          {isLowStock ? 'Low Stock' : 'Adequate'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        KES 10.00
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Operations Activity</CardTitle>
-          <CardDescription>
-            Latest inventory and operations actions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingActivities ? (
-            <ActivityTableSkeleton />
-          ) : (activities ?? []).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No recent activity.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead className="text-right">Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(activities ?? []).slice(0, 10).map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">{activity.user}</TableCell>
-                    <TableCell>{activity.action}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {activity.details || '—'}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {activity.timestamp?.toDate
-                        ? formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true })
-                        : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+            {isLoadingActivities ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                  {(operationsActivities ?? []).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      No operations activities have been logged yet.
+                    </p>
+                  )}
+                  {(operationsActivities ?? []).map((activity: Activity) => (
+                      <div key={activity.id} className="flex items-start gap-4">
+                          <Avatar className="h-9 w-9 border">
+                              <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
+                              <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm">
+                              <p className="font-medium text-muted-foreground">
+                                  <span className="font-semibold text-foreground">{activity.user.name}</span>
+                                  {' '}{activity.action}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                  {activity.timestamp?.toDate ? 
+                                    format(activity.timestamp.toDate(), "MM/dd/yyyy 'at' h:mm a") :
+                                    'just now'
+                                  }
+                              </p>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>
