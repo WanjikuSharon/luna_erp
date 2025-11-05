@@ -206,10 +206,10 @@ export default function RequestsPage() {
                   </TableHeader>
                   <TableBody>
                     {(materialRequests ?? []).map(req => (
-                      <RequestRow 
-                        key={req.id} 
-                        request={req} 
-                        materialNameMap={materialNameMap} 
+                      <RequestRow
+                        key={req.id}
+                        request={req}
+                        materialNameMap={materialNameMap}
                         vendorNameMap={vendorNameMap}
                         onVerifyClick={setVerifyingRequest}
                       />
@@ -236,10 +236,10 @@ export default function RequestsPage() {
                     </TableHeader>
                     <TableBody>
                       {(materialRequests ?? []).filter(r => r.status === status).map(req => (
-                        <RequestRow 
-                          key={req.id} 
-                          request={req} 
-                          materialNameMap={materialNameMap} 
+                        <RequestRow
+                          key={req.id}
+                          request={req}
+                          materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
                           onVerifyClick={setVerifyingRequest}
                         />
