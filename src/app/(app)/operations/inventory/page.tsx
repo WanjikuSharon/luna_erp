@@ -664,14 +664,15 @@ export default function VendorsAndMaterialsPage() {
   );
 }
 
-// --- EditVendorDialog Component (Unchanged) ---
-// (Omitted for brevity)
+// --- UPDATED: EditVendorDialog (now accepts onVendorUpdated prop) ---
 function EditVendorDialog({
   vendor,
   onOpenChange,
+  onVendorUpdated,
 }: {
   vendor: Vendor | null;
   onOpenChange: () => void;
+  onVendorUpdated: (name: string) => void;
 }) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -690,7 +691,11 @@ function EditVendorDialog({
     if (!vendor) return;
     try {
       const docRef = doc(firestore, COLLECTIONS.VENDORS, vendor.id);
-      await updateDoc(docRef, { ...data }); // Use whole object
+      await updateDoc(docRef, { ...data }); 
+      
+      // UPDATED: Call the logger
+      await onVendorUpdated(data.name);
+
       toast({ title: "Vendor Updated", description: `${data.name} has been updated.` });
       onOpenChange(); 
     } catch (error) {
