@@ -159,7 +159,9 @@ export default function AdminDashboardPage() {
       }
     }
 
+
   return (
+    <> {/* UPDATED: Wrapped in Fragment to allow dialogs at the end */}
     <div className="flex flex-col gap-6">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Dashboard</h1>
@@ -184,13 +186,13 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-muted-foreground">all roles included</p>
             </CardContent>
           </Card>
+          {/* ... Other stat cards ... */}
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">System Activities (24h)</CardTitle>
               <ActivityIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {/* TODO: We can calculate this from logs later */}
               <div className="text-2xl font-bold">...</div> 
               <p className="text-xs text-muted-foreground">in the last 24 hours</p>
             </CardContent>
@@ -263,10 +265,28 @@ export default function AdminDashboardPage() {
                               </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                              <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">User actions</span>
-                              </Button>
+                              {/* UPDATED: Replaced Button with DropdownMenu */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">User actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                                    Edit Role
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="text-destructive" 
+                                    onSelect={() => setDeletingUser(user)}
+                                  >
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                           </TableCell>
                           </TableRow>
                       ))}
@@ -321,5 +341,157 @@ export default function AdminDashboardPage() {
             </Card>
         </div>
     </div>
+
+    {/* --- NEW: Render the dialogs for Edit/Delete User --- */}
+    <EditUserDialog
+      user={editingUser}
+      onOpenChange={() => setEditingUser(null)}
+      onUserUpdated={(action) => logAdminActivity(action)}
+    />
+    <DeleteUserAlert
+      user={deletingUser}
+      onOpenChange={() => setDeletingUser(null)}
+      onDelete={handleDeleteUser}
+    />
+    </> // UPDATED: Close fragment
+  );
+}
+
+
+// --- NEW: EditUserDialog Component ---
+function EditUserDialog({
+  user,
+  onOpenChange,
+  onUserUpdated,
+}: {
+  user: User | null;
+  onOpenChange: () => void;
+  onUserUpdated: (action: string) => void;
+}) {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const editUserForm = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserSchema),
+  });
+
+  // Pre-fill the form when the `user` prop changes
+  useEffect(() => {
+    if (user) {
+      editUserForm.reset({ role: user.role });
+    }
+  }, [user, editUserForm]);
+
+  async function onSubmitEditUser(data: EditUserFormValues) {
+    if (!user) return;
+
+    try {
+      const docRef = doc(firestore, COLLECTIONS.USERS, user.id);
+      await updateDoc(docRef, {
+        role: data.role,
+      });
+      
+      // Log this action
+      await onUserUpdated(`changed role for ${user.name} to ${data.role}`);
+      
+      toast({ title: "User Role Updated", description: `${user.name}'s role has been set to ${data.role}.` });
+      onOpenChange(); // Close the dialog
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not update user role." });
+    }
+  }
+
+  return (
+    <Dialog open={!!user} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit User Role</DialogTitle>
+          <DialogDescription>
+            You are editing the role for <strong className="mx-1">{user?.name}</strong> ({user?.email}).
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...editUserForm}>
+          <form onSubmit={editUserForm.handleSubmit(onSubmitEditUser)} className="space-y-4 py-4">
+            <FormField
+              control={editUserForm.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>User Role</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {userRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {roleConfig[role].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onOpenChange}>Cancel</Button>
+              <Button type="submit" disabled={editUserForm.formState.isSubmitting}>
+                {editUserForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// --- NEW: DeleteUserAlert Component ---
+function DeleteUserAlert({
+  user,
+  onOpenChange,
+  onDelete,
+}: {
+  user: User | null;
+  onOpenChange: () => void;
+  onDelete: () => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    await onDelete();
+    setIsDeleting(false);
+  }
+
+  return (
+    <AlertDialog open={!!user} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the user
+            <strong className="mx-1">{user?.name}</strong>
+            from the Firestore database. This does NOT delete their authentication account.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Yes, delete user
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
