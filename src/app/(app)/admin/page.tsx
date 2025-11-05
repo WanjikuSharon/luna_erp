@@ -1,6 +1,11 @@
 // src/app/(app)/admin/page.tsx
 'use client';
 
+// UPDATED: Import new hooks and components
+import { useState, useMemo, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import {
   Card,
   CardContent,
@@ -19,33 +24,86 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { User, Activity } from '@/lib/types';
-import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // NEW: Import Firebase hooks and services
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
+
+// NEW: Import Dropdown, Dialogs, Form, and Select components
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 // Role config from original file
 const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
     operations_manager: { label: 'Operations Manager', variant: 'default' as const },
     production_personnel: { label: 'Production', variant: 'secondary' as const },
-}
+};
+// NEW: Create a list of roles for the dropdown
+const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
+
+// NEW: Schema for the edit user form
+const editUserSchema = z.object({
+  role: z.enum(userRoles, {
+    required_error: "Please select a role.",
+  }),
+});
+type EditUserFormValues = z.infer<typeof editUserSchema>;
+
 
 export default function AdminDashboardPage() {
-    // const newLogoUrl = '...'; // This was in the original file, but not used.
-    
-    // --- NEW: Fetch Live Data ---
+    const { toast } = useToast();
     const firestore = useFirestore();
 
-    const usersRef = useMemoFirebase(
-      () => collection(firestore, COLLECTIONS.USERS),
-      [firestore]
-    );
+    // NEW: Get the currently logged-in admin (for logging)
+    const { user: adminUser } = useUser();
+    
+    // --- Live Data Fetching (Unchanged) ---
+    const usersRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.USERS), [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersRef);
 
     const activitiesRef = useMemoFirebase(
@@ -55,6 +113,51 @@ export default function AdminDashboardPage() {
     const { data: adminActivities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
 
     const isLoading = isLoadingUsers || isLoadingActivities;
+
+    // --- NEW: State for Edit/Delete dialogs ---
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [deletingUser, setDeletingUser] = useState<User | null>(null);
+
+    // --- NEW: Centralized Activity Logger ---
+    const logAdminActivity = async (action: string) => {
+      // Find the admin's name from the live 'users' list
+      const fakeAdminId = 'user-1'; // Fallback to Mark Maina
+      const currentAdminId = adminUser ? adminUser.uid : fakeAdminId;
+      // We use the live 'users' list to find the name
+      const currentUser = users?.find(u => u.id === currentAdminId); 
+      
+      const userName = currentUser?.name || 'Admin System';
+      const userAvatar = currentUser?.avatarUrl || '';
+
+      try {
+        await addDoc(collection(firestore, 'admin_activities'), {
+          action: action,
+          user: { name: userName, avatarUrl: userAvatar },
+          timestamp: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Failed to log admin activity:", error);
+      }
+    };
+
+    // --- NEW: Handle Delete User ---
+    async function handleDeleteUser() {
+      if (!deletingUser) return;
+      try {
+        // We delete the user's data document.
+        // NOTE: This does NOT delete their Firebase Auth account.
+        const docRef = doc(firestore, COLLECTIONS.USERS, deletingUser.id);
+        await deleteDoc(docRef);
+        
+        await logAdminActivity(`deleted user: ${deletingUser.name} (${deletingUser.email})`);
+        toast({ title: "User Deleted", description: `${deletingUser.name} has been removed.` });
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete user." });
+      } finally {
+        setDeletingUser(null);
+      }
+    }
 
   return (
     <div className="flex flex-col gap-6">
