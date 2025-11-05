@@ -3,8 +3,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { initializeFirebase } from '@/firebase'; // Use your existing init
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase/server-init'; // Good: This is our new server fileimport { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { sendEmail } from '@/services/email_service'; // Import the email service
 import type { User, NotificationSettings } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
