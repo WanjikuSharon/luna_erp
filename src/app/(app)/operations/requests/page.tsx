@@ -236,7 +236,13 @@ export default function RequestsPage() {
                     </TableHeader>
                     <TableBody>
                       {(materialRequests ?? []).filter(r => r.status === status).map(req => (
-                        <RequestRow key={req.id} request={req} materialNameMap={materialNameMap} vendorNameMap={vendorNameMap}/>
+                        <RequestRow 
+                          key={req.id} 
+                          request={req} 
+                          materialNameMap={materialNameMap} 
+                          vendorNameMap={vendorNameMap}
+                          onVerifyClick={setVerifyingRequest}
+                        />
                       ))}
                     </TableBody>
                   </Table>
@@ -246,6 +252,14 @@ export default function RequestsPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* NEW: Add the dialog component here */}
+      <VerifyDeliveryDialog
+        request={verifyingRequest}
+        onOpenChange={(open) => {
+          if (!open) setVerifyingRequest(null);
+        }}
+      />
     </div>
   );
 }
