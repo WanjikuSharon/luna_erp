@@ -80,7 +80,25 @@ export function useCollection<T = any>(
         for (const doc of snapshot.docs) {
           results.push({ ...(doc.data() as T), id: doc.id });
         }
-        setData(results);
+        
+        // Only update state if data actually changed
+        setData(prevData => {
+          // If no previous data, always update
+          if (!prevData) return results;
+          
+          // If length changed, update
+          if (prevData.length !== results.length) return results;
+          
+          // Deep comparison - check if any document changed
+          const hasChanges = results.some((newDoc, index) => {
+            const oldDoc = prevData[index];
+            return JSON.stringify(newDoc) !== JSON.stringify(oldDoc);
+          });
+          
+          // Only return new array if there are actual changes
+          return hasChanges ? results : prevData;
+        });
+        
         setError(null);
         setIsLoading(false);
       },
