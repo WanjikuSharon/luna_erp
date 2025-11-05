@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ClipboardList, Recycle, PackageSearch } from 'lucide-react'; // Import icons
+import { LayoutDashboard, ClipboardList, Recycle, Package, PackageSearch } from 'lucide-react'; // Import icons
 
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,11 @@ const sidebarNavItems = [
     title: 'Vendors & Materials', // NEW
     href: '/operations/inventory',
     icon: PackageSearch, // Use a more fitting icon
+  },
+  {
+    title: 'Packaging', // <-- ADD THIS
+    href: '/operations/packaging',
+    icon: Package, // <-- USE NEW ICON
   },
   {
     title: 'Requests List', // RENAMED
