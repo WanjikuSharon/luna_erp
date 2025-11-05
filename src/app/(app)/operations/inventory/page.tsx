@@ -801,13 +801,15 @@ function DeleteVendorAlert({
   );
 }
 
-// --- UPDATED: New EditMaterialDialog Component ---
+// --- UPDATED: EditMaterialDialog (now accepts onMaterialUpdated prop) ---
 function EditMaterialDialog({
   material,
   onOpenChange,
+  onMaterialUpdated,
 }: {
   material: RawMaterial | null;
   onOpenChange: () => void;
+  onMaterialUpdated: (name: string) => void;
 }) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -837,6 +839,10 @@ function EditMaterialDialog({
         unit: data.unit,
         reorderPoint: data.reorderPoint,
       });
+
+      // UPDATED: Call the logger
+      await onMaterialUpdated(data.name);
+
       toast({ title: "Material Updated", description: `${data.name} has been updated.` });
       onOpenChange(); // Close the dialog
     } catch (error) {
