@@ -39,6 +39,9 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // UPDATED: Get the user
+  const { user: authUser } = useUser();
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -119,6 +122,24 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
         title: 'Delivery Verified!',
         description: 'The request status has been updated to "Delivered".',
       });
+
+      // UPDATED: Log this action
+      try {
+        const fakeUserId = 'user-2'; // Mercy (Operations)
+        const currentUserId = authUser ? authUser.uid : fakeUserId;
+        const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+        const userName = currentUser?.name || 'System';
+        const userAvatar = currentUser?.avatarUrl || '';
+
+        await addDoc(collection(firestore, 'operations_activities'), {
+          action: `verified delivery for request ID ${request.id}.`,
+          user: { name: userName, avatarUrl: userAvatar },
+          timestamp: serverTimestamp(),
+        });
+      } catch (logError) {
+        console.error("Failed to log activity:", logError);
+      }
+
       handleClose();
 
     } catch (error: any) {
