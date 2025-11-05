@@ -1,7 +1,6 @@
 // src/app/(app)/admin/page.tsx
 'use client';
 
-// UPDATED: Import new hooks and components
 import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,18 +22,17 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { User, Activity } from '@/lib/types';
+// UPDATED: Import ProductionBatch type
+import type { User, Activity, ProductionBatch } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow } from 'date-fns';
+// UPDATED: Import date-fns functions
+import { formatDistanceToNow, subDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// NEW: Import Firebase hooks and services
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+// UPDATED: Import 'where' and 'Timestamp'
+import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
-
-// NEW: Import Dropdown, Dialogs, Form, and Select components
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,17 +100,58 @@ export default function AdminDashboardPage() {
     // NEW: Get the currently logged-in admin (for logging)
     const { user: adminUser } = useUser();
     
-    // --- Live Data Fetching (Unchanged) ---
+    // --- UPDATED: Fetch All Data for Dashboard ---
     const usersRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.USERS), [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersRef);
 
-    const activitiesRef = useMemoFirebase(
-      () => query(collection(firestore, 'admin_activities'), orderBy('timestamp', 'desc')),
-      [firestore]
-    );
-    const { data: adminActivities, isLoading: isLoadingActivities } = useCollection<Activity>(activitiesRef);
+    // Get timestamp for 24 hours ago
+    const oneDayAgo = subDays(new Date(), 1);
+    const oneDayAgoTimestamp = Timestamp.fromDate(oneDayAgo);
 
-    const isLoading = isLoadingUsers || isLoadingActivities;
+    // Query for admin activities in the last 24h
+    const adminActivitiesRef = useMemoFirebase(
+      () => query(
+        collection(firestore, 'admin_activities'), 
+        where('timestamp', '>=', oneDayAgoTimestamp),
+        orderBy('timestamp', 'desc')
+      ),
+      [firestore, oneDayAgoTimestamp]
+    );
+    const { data: adminActivities, isLoading: isLoadingAdminActivities } = useCollection<Activity>(adminActivitiesRef);
+
+    // Query for operations activities in the last 24h
+    const opsActivitiesRef = useMemoFirebase(
+      () => query(
+        collection(firestore, 'operations_activities'), 
+        where('timestamp', '>=', oneDayAgoTimestamp),
+        orderBy('timestamp', 'desc')
+      ),
+      [firestore, oneDayAgoTimestamp]
+    );
+    const { data: opsActivities, isLoading: isLoadingOpsActivities } = useCollection<Activity>(opsActivitiesRef);
+    
+    // Query for production batches in the last 24h
+    const prodBatchesRef = useMemoFirebase(
+      () => query(
+        collection(firestore, 'production_batches'), 
+        where('createdAt', '>=', oneDayAgoTimestamp),
+        orderBy('createdAt', 'desc')
+      ),
+      [firestore, oneDayAgoTimestamp]
+    );
+    const { data: prodBatches, isLoading: isLoadingProdBatches } = useCollection<ProductionBatch>(prodBatchesRef);
+
+    // Combine all activities for the "System Audit Log"
+    // Note: We're only showing admin activities in the log for now, but we'll count all of them.
+    const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches;
+
+    // --- NEW: Calculate "System Activities (24h)" ---
+    const totalActivities24h = useMemo(() => {
+        const adminCount = adminActivities?.length || 0;
+        const opsCount = opsActivities?.length || 0;
+        const prodCount = prodBatches?.length || 0;
+        return adminCount + opsCount + prodCount;
+    }, [adminActivities, opsActivities, prodBatches]);
 
     // --- NEW: State for Edit/Delete dialogs ---
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -186,14 +225,18 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-muted-foreground">all roles included</p>
             </CardContent>
           </Card>
-          {/* ... Other stat cards ... */}
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">System Activities (24h)</CardTitle>
               <ActivityIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">...</div> 
+              {/* UPDATED: This card is now live */}
+              {isLoading ? (
+                 <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{totalActivities24h}</div> 
+              )}
               <p className="text-xs text-muted-foreground">in the last 24 hours</p>
             </CardContent>
           </Card>
@@ -303,7 +346,7 @@ export default function AdminDashboardPage() {
                 <CardDescription>Recent high-level system and user activities.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {isLoadingActivities ? (
+                    {isLoadingAdminActivities ? (
                       <div className="space-y-4">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
