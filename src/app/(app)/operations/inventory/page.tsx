@@ -35,14 +35,12 @@ import {
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
   Form,
@@ -70,7 +68,7 @@ import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
 import { users as mockUsers } from '@/lib/data'; 
 
-// --- Schemas (Unchanged) ---
+// --- Schemas ---
 const requestFormSchema = z.object({
   materialId: z.string().min(1, 'Please select a material.'),
   quantity: z.coerce.number().min(0.1, 'Quantity must be positive.'),
@@ -105,15 +103,12 @@ export default function VendorsAndMaterialsPage() {
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
-
-  // --- State for Edit/Delete ---
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
-  // UPDATED: Add state for materials
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState<RawMaterial | null>(null);
 
-  // --- Data Fetching (Unchanged) ---
+  // --- Data Fetching ---
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
   const vendorsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.VENDORS), [firestore]); 
   
@@ -129,13 +124,43 @@ export default function VendorsAndMaterialsPage() {
     );
   }, [vendors, vendorSearchTerm]);
 
-  // --- Forms (Unchanged) ---
-  const requestForm = useForm<RequestFormValues>({ /* ... */ });
-  const vendorForm = useForm<VendorFormValues>({ /* ... */ });
-  const materialForm = useForm<RawMaterialFormValues>({ /* ... */ });
+  // --- Forms ---
+  const requestForm = useForm<RequestFormValues>({ 
+    defaultValues: { materialId: '', vendorId: '', quantity: 0, unit: 'kg' }
+  });
+  const vendorForm = useForm<VendorFormValues>({ 
+    defaultValues: { name: '', email: '', phone: '', address: '' }
+  });
+  const materialForm = useForm<RawMaterialFormValues>({ 
+    defaultValues: { sku: '', name: '', quantity: 0, unit: 'kg', reorderPoint: 0 }
+  });
 
-  // --- onSubmit Functions (Unchanged) ---
-  async function onSubmitRequest(data: RequestFormValues) { /* (Omitted for brevity, no changes) */ 
+  // --- UPDATED: Centralized Activity Logger ---
+  const { user: authUser } = useUser();
+  const logOperationActivity = async (action: string) => {
+    // Find the user's name from the mock data list (since we bypassed login)
+    // In a real app, you'd get this from the 'users' collection using user.uid
+    const fakeUserId = 'user-2'; // Mercy (Operations)
+    const currentUserId = authUser ? authUser.uid : fakeUserId;
+    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+
+    const userName = currentUser?.name || 'System';
+    const userAvatar = currentUser?.avatarUrl || '';
+
+    try {
+      await addDoc(collection(firestore, 'operations_activities'), {
+        action: action,
+        user: { name: userName, avatarUrl: userAvatar },
+        timestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Failed to log activity:", error);
+      // Don't block the main action, just log the error
+    }
+  };
+
+  // --- UPDATED: onSubmit Functions (now with logging) ---
+  async function onSubmitRequest(data: RequestFormValues) {
     const fakeUserId = 'user-2';
     const currentUserId = user ? user.uid : fakeUserId;
     const requester = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
@@ -158,6 +183,10 @@ export default function VendorsAndMaterialsPage() {
         updatedAt: serverTimestamp(),
       });
       newRequestId = docRef.id;
+
+      // UPDATED: Log this action
+      await logOperationActivity(`created a new delivery request for ${data.quantity} ${data.unit} of ${material?.name || 'material'}.`);
+
       toast({ title: "Delivery Request Sent", description: "Your request has been logged." });
       requestForm.reset();
       setIsRequestDialogOpen(false);
@@ -176,7 +205,8 @@ export default function VendorsAndMaterialsPage() {
       toast({ variant: "destructive", title: "Submission Failed", description: "Could not save request." });
     }
   }
-  async function onSubmitAddVendor(data: VendorFormValues) { /* (Omitted for brevity, no changes) */ 
+
+  async function onSubmitAddVendor(data: VendorFormValues) {
     try {
       await addDoc(collection(firestore, COLLECTIONS.VENDORS), {
         name: data.name,
@@ -184,6 +214,10 @@ export default function VendorsAndMaterialsPage() {
         phone: data.phone || '',
         address: data.address || '',
       });
+
+      // UPDATED: Log this action
+      await logOperationActivity(`added new vendor: ${data.name}`);
+
       toast({ title: "Vendor Added", description: `${data.name} has been added to the vendor list.` });
       vendorForm.reset();
       setIsAddVendorDialogOpen(false);
@@ -192,7 +226,8 @@ export default function VendorsAndMaterialsPage() {
       toast({ variant: "destructive", title: "Save Failed", description: "Could not add vendor. Please try again." });
     }
   }
-  async function onSubmitAddMaterial(data: RawMaterialFormValues) { /* (Omitted for brevity, no changes) */
+
+  async function onSubmitAddMaterial(data: RawMaterialFormValues) {
     try {
         await addDoc(collection(firestore, COLLECTIONS.RAW_MATERIALS), {
             sku: data.sku,
@@ -201,6 +236,10 @@ export default function VendorsAndMaterialsPage() {
             unit: data.unit,
             reorderPoint: data.reorderPoint,
         });
+
+        // UPDATED: Log this action
+        await logOperationActivity(`added new material: ${data.name} (SKU: ${data.sku})`);
+        
         toast({ title: "Material Added", description: `${data.name} has been added to inventory.` });
         materialForm.reset();
         setIsAddMaterialDialogOpen(false);
@@ -210,19 +249,23 @@ export default function VendorsAndMaterialsPage() {
     }
   }
   
-  // (Helper function unchanged)
-  function getStatus(item: RawMaterial) { /* (Omitted for brevity, no changes) */
+  // Helper function
+  function getStatus(item: RawMaterial) {
     if (item.quantity === 0) return { text: 'Out of Stock', variant: 'destructive' as const };
     if (item.quantity < item.reorderPoint) return { text: 'Low Stock', variant: 'outline' as const };
     return { text: 'In Stock', variant: 'secondary' as const };
   }
 
-  // --- Handle Delete Vendor (Unchanged) ---
-  async function handleDeleteVendor() { /* (Omitted for brevity, no changes) */
+  // --- UPDATED: Handle Delete Vendor (with logging) ---
+  async function handleDeleteVendor() {
     if (!deletingVendor) return;
     try {
       const docRef = doc(firestore, COLLECTIONS.VENDORS, deletingVendor.id);
       await deleteDoc(docRef);
+      
+      // UPDATED: Log this action
+      await logOperationActivity(`deleted vendor: ${deletingVendor.name}`);
+
       toast({ title: "Vendor Deleted", description: `${deletingVendor.name} has been deleted.` });
     } catch (error) {
       console.error("Error deleting vendor:", error);
@@ -232,13 +275,17 @@ export default function VendorsAndMaterialsPage() {
     }
   }
 
-  // --- UPDATED: New Handle Delete Material ---
+  // --- UPDATED: Handle Delete Material (with logging) ---
   async function handleDeleteMaterial() {
     if (!deletingMaterial) return;
     
     try {
       const docRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, deletingMaterial.id);
       await deleteDoc(docRef);
+
+      // UPDATED: Log this action
+      await logOperationActivity(`deleted material: ${deletingMaterial.name}`);
+      
       toast({ title: "Material Deleted", description: `${deletingMaterial.name} has been deleted.` });
     } catch (error) {
       console.error("Error deleting material:", error);
@@ -380,7 +427,7 @@ export default function VendorsAndMaterialsPage() {
                               <FormField control={vendorForm.control} name="phone" render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Phone Number (Optional)</FormLabel>
-                                    <FormControl><Input placeholder="e.g., +254 700 000 000" {...field} /></FormControl>
+                                    <FormControl><Input placeholder="e.g., +254 700 000 000" {...field} value={field.value || ''} /></FormControl>
                                     <FormMessage />
                                   </FormItem>
                                 )}
@@ -388,7 +435,7 @@ export default function VendorsAndMaterialsPage() {
                               <FormField control={vendorForm.control} name="address" render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Address (Optional)</FormLabel>
-                                    <FormControl><Input placeholder="e.g., 123 Biashara St, Nairobi" {...field} /></FormControl>
+                                    <FormControl><Input placeholder="e.g., 123 Biashara St, Nairobi" {...field} value={field.value || ''} /></FormControl>
                                     <FormMessage />
                                   </FormItem>
                                 )}
@@ -591,10 +638,11 @@ export default function VendorsAndMaterialsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* --- Dialogs for Vendor Edit/Delete (Unchanged) --- */}
+      {/* --- UPDATED: Pass logger function to Edit Dialogs --- */}
       <EditVendorDialog
         vendor={editingVendor}
         onOpenChange={() => setEditingVendor(null)}
+        onVendorUpdated={(name) => logOperationActivity(`updated vendor: ${name}`)} 
       />
       <DeleteVendorAlert
         vendor={deletingVendor}
@@ -602,10 +650,10 @@ export default function VendorsAndMaterialsPage() {
         onDelete={handleDeleteVendor}
       />
       
-      {/* --- UPDATED: New Dialogs for Material Edit/Delete --- */}
       <EditMaterialDialog
         material={editingMaterial}
         onOpenChange={() => setEditingMaterial(null)}
+        onMaterialUpdated={(name) => logOperationActivity(`updated material: ${name}`)} 
       />
       <DeleteMaterialAlert
         material={deletingMaterial}
@@ -629,6 +677,7 @@ function EditVendorDialog({
   const firestore = useFirestore();
   const editVendorForm = useForm<VendorFormValues>({
     resolver: zodResolver(vendorFormSchema),
+    defaultValues: { name: '', email: '', phone: '', address: '' }
   });
 
   useEffect(() => {
@@ -681,7 +730,7 @@ function EditVendorDialog({
             <FormField control={editVendorForm.control} name="phone" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Phone Number (Optional)</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -689,7 +738,7 @@ function EditVendorDialog({
             <FormField control={editVendorForm.control} name="address" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Address (Optional)</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -761,6 +810,7 @@ function EditMaterialDialog({
   // Form for editing the material
   const editMaterialForm = useForm<RawMaterialFormValues>({
     resolver: zodResolver(rawMaterialFormSchema),
+    defaultValues: { sku: '', name: '', quantity: 0, unit: 'kg', reorderPoint: 0 }
   });
 
   // Pre-fill the form when the `material` prop changes
