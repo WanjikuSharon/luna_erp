@@ -2,11 +2,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
 import type { MaterialRequest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { users as mockUsers } from '@/lib/data';
 
 import {
   Dialog,
