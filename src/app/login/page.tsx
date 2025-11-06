@@ -174,7 +174,7 @@ export default function LoginPage() {
             </div>
 
             {/* Right Side (Form Panel) */}
-            <div className="w-full md:w-1/2 p-8 md:p-12">
+            <div className="w-full md:w-1/2 p-8 md:p-12 bg-white">
               <h2 className="font-headline text-4xl md:text-5xl font-extrabold text-center text-[#096394] mb-6 drop-shadow-md tracking-wide">
                 ERP SYSTEM
               </h2>
