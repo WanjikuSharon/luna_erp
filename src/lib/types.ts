@@ -31,6 +31,8 @@ export type Product = {
   sku: string;
   quantity: number;
   unit: 'units';
+  category?: string;
+  packSize?: number;
 };
 
 // NEW: Packaging Material Type
