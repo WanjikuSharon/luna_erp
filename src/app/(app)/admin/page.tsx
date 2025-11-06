@@ -153,6 +153,9 @@ export default function AdminDashboardPage() {
     // Combine all activities for the "System Audit Log"
     // Note: We're only showing admin activities in the log for now, but we'll count all of them.
     const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesReports;
+    
+    // Separate loading state for activities only (to prevent flickering)
+    const isLoadingActivities = isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches;
 
     // --- NEW: Calculate "System Activities (24h)" ---
     const totalActivities24h = useMemo(() => {
@@ -242,8 +245,8 @@ export default function AdminDashboardPage() {
               <ActivityIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {/* UPDATED: This card is now live */}
-              {isLoading ? (
+              {/* UPDATED: Use specific loading state to prevent flickering */}
+              {isLoadingActivities ? (
                  <Skeleton className="h-8 w-16" />
               ) : (
                 <div className="text-2xl font-bold">{totalActivities24h}</div> 
