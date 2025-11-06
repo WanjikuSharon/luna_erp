@@ -260,6 +260,18 @@ export default function ReconciliationPage() {
     window.print();
   };
 
+  // Don't render until mounted on client to prevent SSR issues
+  if (!mounted) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Daily Reconciliation</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* --- Header & Controls --- */}
