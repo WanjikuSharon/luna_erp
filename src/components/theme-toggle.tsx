@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function ThemeToggle() {
-  const [theme, setThemeState] = React.useState<'theme-light' | 'dark' | 'system'>('system');
+  const [theme, setThemeState] = React.useState<'theme-light' | 'dark' | 'system'>('dark');
 
   React.useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains('dark');
@@ -17,9 +17,7 @@ export function ThemeToggle() {
   }, []);
 
   React.useEffect(() => {
-    const isDark =
-      theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = theme === 'dark';
     document.documentElement.classList[isDark ? 'add' : 'remove']('dark');
   }, [theme]);
 
