@@ -22,12 +22,12 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-// UPDATED: Import ProductionBatch type
-import type { User, Activity, ProductionBatch } from '@/lib/types';
+// UPDATED: Import DailySalesReport
+import type { User, Activity, ProductionBatch, DailySalesReport } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-// UPDATED: Import date-fns functions
-import { formatDistanceToNow, subDays } from 'date-fns';
+// UPDATED: Import format
+import { format, formatDistanceToNow, subDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 // UPDATED: Import 'where' and 'Timestamp'
@@ -74,6 +74,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+// NEW: Import the report sheet
+import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
 
 // Role config from original file
 const roleConfig = {
@@ -82,11 +84,11 @@ const roleConfig = {
     production_personnel: { label: 'Production', variant: 'secondary' as const },
 };
 // NEW: Create a list of roles for the dropdown
-const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
+const userRoles = ['admin', 'operations_manager', 'production_personnel'] as const;
 
 // NEW: Schema for the edit user form
 const editUserSchema = z.object({
-  role: z.enum(userRoles, {
+  role: z.enum(['admin', 'operations_manager', 'production_personnel'], {
     required_error: "Please select a role.",
   }),
 });
@@ -141,9 +143,16 @@ export default function AdminDashboardPage() {
     );
     const { data: prodBatches, isLoading: isLoadingProdBatches } = useCollection<ProductionBatch>(prodBatchesRef);
 
+    // --- NEW: Fetch Daily Sales Reports ---
+    const salesReportsRef = useMemoFirebase(
+      () => query(collection(firestore, 'daily_sales_records'), orderBy('date', 'desc')),
+      [firestore]
+    );
+    const { data: dailySalesReports, isLoading: isLoadingSalesReports } = useCollection<DailySalesReport>(salesReportsRef);
+
     // Combine all activities for the "System Audit Log"
     // Note: We're only showing admin activities in the log for now, but we'll count all of them.
-    const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches;
+    const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesReports;
 
     // --- NEW: Calculate "System Activities (24h)" ---
     const totalActivities24h = useMemo(() => {
@@ -156,6 +165,8 @@ export default function AdminDashboardPage() {
     // --- NEW: State for Edit/Delete dialogs ---
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
+    // --- NEW: State for viewing a sales report ---
+    const [viewingReport, setViewingReport] = useState<DailySalesReport | null>(null);
 
     // --- NEW: Centralized Activity Logger ---
     const logAdminActivity = async (action: string) => {
@@ -339,45 +350,49 @@ export default function AdminDashboardPage() {
                 </CardContent>
             </Card>
             
-            {/* --- UPDATED: System Audit Log Card --- */}
+            {/* --- UPDATED: This card is now Daily Sales Reports --- */}
             <Card>
                 <CardHeader>
-                <CardTitle>System Audit Log</CardTitle>
-                <CardDescription>Recent high-level system and user activities.</CardDescription>
+                <CardTitle>Daily Sales Reports</CardTitle>
+                <CardDescription>Review and print submitted sales reports.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {isLoadingAdminActivities ? (
+                    {isLoadingSalesReports ? (
                       <div className="space-y-4">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                       </div>
                     ) : (
                       <>
-                        {(adminActivities ?? []).length === 0 && (
+                        {(dailySalesReports ?? []).length === 0 && (
                           <p className="text-sm text-muted-foreground text-center">
-                            No admin activities have been logged yet.
+                            No daily sales reports have been submitted yet.
                           </p>
                         )}
-                        {(adminActivities ?? []).map((activity: Activity) => (
-                            <div key={activity.id} className="flex items-start gap-4">
-                                <Avatar className="h-9 w-9">
-                                    <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
-                                    <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="text-sm">
-                                    <p className="font-medium">
-                                        {activity.user.name}{' '}
-                                        <span className="text-muted-foreground font-normal">{activity.action.toLowerCase()}</span>
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {activity.timestamp?.toDate ? 
-                                          formatDistanceToNow(activity.timestamp.toDate(), { addSuffix: true }) :
-                                          'just now'
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                        {(dailySalesReports ?? []).length > 0 && (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Salesperson</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(dailySalesReports ?? []).map((report: DailySalesReport) => (
+                                <TableRow key={report.id}>
+                                  <TableCell className="font-medium">{report.salespersonName}</TableCell>
+                                  <TableCell>{format(report.date.toDate(), 'PPP')}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="outline" size="sm" onClick={() => setViewingReport(report)}>
+                                      View & Print
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
                       </>
                     )}
                 </CardContent>
@@ -395,6 +410,12 @@ export default function AdminDashboardPage() {
       user={deletingUser}
       onOpenChange={() => setDeletingUser(null)}
       onDelete={handleDeleteUser}
+    />
+
+    {/* --- NEW: Dialog for Sales Report --- */}
+    <DailySalesReportSheet
+      report={viewingReport}
+      onOpenChange={() => setViewingReport(null)}
     />
     </> // UPDATED: Close fragment
   );
