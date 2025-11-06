@@ -203,7 +203,7 @@ export default function LoginPage() {
                   />
                   <Link
                     href="/forgot-password"
-                    className="text-sm text-[#096394] hover:underline"
+                    className="text-sm text-red-600 hover:text-red-700 hover:underline font-medium"
                     prefetch={false}
                   >
                     Forgot Password?
@@ -221,7 +221,11 @@ export default function LoginPage() {
               
               <div className="mt-4 text-center text-sm">
                 Don&apos;t have an account?{' '}
-                <Button variant="link" className="p-0 h-auto" onClick={() => setShowNoAccountDialog(true)}>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-[#096394] hover:text-[#074d73] font-medium" 
+                  onClick={() => setShowNoAccountDialog(true)}
+                >
                   Contact ICT
                 </Button>
               </div>
