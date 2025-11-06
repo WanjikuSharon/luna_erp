@@ -1,7 +1,7 @@
 // src/app/(app)/operations/reconciliation/page.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -131,15 +131,28 @@ const findProductStock = (products: Product[], name: string) => {
 export default function ReconciliationPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  
+  // Prevent SSR errors by checking if we're on the client
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // --- Data Fetching ---
-  const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
-  const salespeopleRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.SALESPEOPLE), [firestore]);
+  const productsRef = useMemoFirebase(() => 
+    mounted ? collection(firestore, COLLECTIONS.PRODUCTS) : null, 
+    [firestore, mounted]
+  );
+  const salespeopleRef = useMemoFirebase(() => 
+    mounted ? collection(firestore, COLLECTIONS.SALESPEOPLE) : null, 
+    [firestore, mounted]
+  );
 
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
   const { data: salespeople, isLoading: isLoadingSalespeople } = useCollection<Salesperson>(salespeopleRef);
 
-  const isLoading = isLoadingProducts || isLoadingSalespeople;
+  const isLoading = isLoadingProducts || isLoadingSalespeople || !mounted;
 
   // --- Form Setup ---
   const form = useForm<ReconciliationFormValues>({
@@ -158,7 +171,7 @@ export default function ReconciliationPage() {
 
   // This effect populates the form once live data is ready
   useEffect(() => {
-    if (products) {
+    if (products && mounted) {
       const initialRecords = RECONCILIATION_PRODUCTS.map(p => {
         const matchingProduct = products.find(liveProd => liveProd.name === p.name);
         const openingStock = matchingProduct ? matchingProduct.quantity : 0;
@@ -177,7 +190,7 @@ export default function ReconciliationPage() {
       });
       replace(initialRecords); // Set the form's field array
     }
-  }, [products, replace]);
+  }, [products, replace, mounted]);
 
 
   // Watch all record fields to recalculate closing stock
