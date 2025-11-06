@@ -98,7 +98,7 @@ export default function OperationsDashboardPage() {
               <Skeleton className="h-8 w-32" />
             ) : (
               <div className="text-2xl font-bold">
-                ${dashboardStats.inventoryValue.toLocaleString()}
+                Ksh {dashboardStats.inventoryValue.toLocaleString()}
               </div>
             )}
             <p className="text-xs text-muted-foreground">Based on current stock</p>
