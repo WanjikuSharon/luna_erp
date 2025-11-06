@@ -164,3 +164,35 @@ export type ProductRecipe = {
   id: string; // This will be the same as the Product ID
   materials: RecipeMaterial[];
 };
+
+// --- NEW: Types for Sales & Reconciliation ---
+
+// Represents a salesperson
+export type Salesperson = {
+  id: string;
+  name: string;
+  // you can add more fields later, like 'region' or 'employeeId'
+};
+
+// Represents the data for a single product row in the reconciliation sheet
+export type SalesRecordEntry = {
+  productId: string;
+  productName: string; // "Shower Gel - Juicy Mango"
+  size: number; // 400
+  openingStock: number;
+  qtyIssued: number;
+  qtySold: number;
+  qtyReturned: number;
+  defects: number;
+  closingStock: number; // Will be calculated
+};
+
+// Represents the entire form submission
+export type DailySalesReport = {
+  id: string; // Firestore document ID
+  date: any; // Firestore Timestamp
+  salespersonId: string;
+  salespersonName: string;
+  // An array of all the product rows
+  records: SalesRecordEntry[];
+};
