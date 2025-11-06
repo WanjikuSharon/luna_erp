@@ -75,3 +75,62 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* NEW: Print-specific styles */
+@media print {
+  /* Hide all elements by default */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the print-area and its children */
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+  
+  /* Position the print area at the top of the page */
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 1rem; /* Add some padding for the print */
+  }
+
+  /* Remove default print headers/footers */
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+
+  /* Ensure buttons and other UI are not printed */
+  .no-print, .no-print * {
+    display: none !important;
+  }
+
+  /* Optimize table for printing */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 10pt !important; /* Smaller font for print */
+  }
+  th, td {
+    border: 1px solid #000 !important;
+    padding: 4px 6px !important;
+    text-align: left;
+  }
+  th {
+    background-color: #eee !important; /* Light gray header */
+  }
+  /* Ensure inputs are not shown, but their values are (we'll handle this in code) */
+  input {
+    border: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
