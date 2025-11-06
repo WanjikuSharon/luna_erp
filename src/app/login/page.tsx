@@ -35,10 +35,10 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  // This is the new logo URL from your other files
+  // --- New Logo URL ---
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
   
-  // --- New Firestore hooks (from our previous conversation) ---
+  // --- New Firestore user data fetching ---
   const firestore = useFirestore(); 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -176,7 +176,7 @@ export default function LoginPage() {
             {/* Right Side (Form Panel) */}
             <div className="w-full md:w-1/2 p-8 md:p-12">
               <h2 className="font-headline text-3xl font-bold text-center text-[#096394] mb-6">
-                ERP System
+                ERP SYSTEM
               </h2>
 
               <form onSubmit={handleLogin} className="grid gap-4 mt-6">
