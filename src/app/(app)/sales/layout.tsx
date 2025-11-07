@@ -9,7 +9,6 @@ import {
   PackageCheck,
   PackageOpen,
   BookMarked,
-  FileText
 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 
@@ -34,11 +33,6 @@ const sidebarNavItems = [
     title: 'Daily Sales Ledger', // Form from 1000497324.jpg
     href: '/sales/ledger',
     icon: BookMarked,
-  },
-  {
-    title: 'Daily Reconciliation', // The page we already built
-    href: '/sales/reconciliation',
-    icon: FileText,
   },
 ];
 
