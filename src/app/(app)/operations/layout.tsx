@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ClipboardList, Package, PackageSearch } from 'lucide-react'; // Import icons
+import { LayoutDashboard, ClipboardList, Package, PackageSearch, Recycle } from 'lucide-react'; // Import icons
 
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,11 @@ const sidebarNavItems = [
     title: 'Requests List', // RENAMED
     href: '/operations/requests',
     icon: ClipboardList,
+  },
+  {
+    title: 'Daily Reconciliation',
+    href: '/operations/reconciliation',
+    icon: Recycle,
   },
 ];
 
