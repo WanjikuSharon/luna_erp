@@ -171,6 +171,7 @@ export type ProductRecipe = {
 export type Salesperson = {
   id: string;
   name: string;
+  phone?: string; // Added for the sales ledger
   // you can add more fields later, like 'region' or 'employeeId'
 };
 
@@ -195,4 +196,18 @@ export type DailySalesReport = {
   salespersonName: string;
   // An array of all the product rows
   records: SalesRecordEntry[];
+};
+
+// NEW: Represents the data from the sales ledger (1000497324.jpg)
+export type DailySalesLedgerEntry = {
+  id: string; // Firestore document ID
+  date: any; // Firestore Timestamp
+  agentId: string;
+  agentName: string;
+  agentPhone: string;
+  productsSold: number; // The "6", "3", "5"
+  amountSold: number; // The "1880", "620", "11250"
+  // "Signature" will be handled by auth (knowing *who* submitted it)
+  submittedBy: string; // User ID of submitter (Maina Kinyua)
+  createdAt: any; // Firestore Timestamp
 };
