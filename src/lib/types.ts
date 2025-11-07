@@ -211,3 +211,22 @@ export type DailySalesLedgerEntry = {
   submittedBy: string; // User ID of submitter (Maina Kinyua)
   createdAt: any; // Firestore Timestamp
 };
+
+// NEW: Represents an item in a stock out/in log
+export type VanStockItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+};
+
+// NEW: Represents a single "Stock Out" or "Stock In" event
+export type VanStockLog = {
+  id: string; // Firestore document ID
+  date: any; // Firestore Timestamp
+  type: 'out' | 'in'; // Stock Out or Stock In
+  agentId: string;
+  agentName: string;
+  submittedBy: string; // User ID of submitter (Maina Kinyua)
+  items: VanStockItem[]; // Array of products
+  createdAt: any; // Firestore Timestamp
+};
