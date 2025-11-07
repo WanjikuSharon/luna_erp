@@ -22,16 +22,16 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-// UPDATED: Import DailySalesReport
-import type { User, Activity, ProductionBatch, DailySalesReport } from '@/lib/types';
-import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+// UPDATED: Import DailySalesReport, DailySalesLedgerEntry and ProductionBatch
+import type { User, Activity, DailySalesReport, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
+import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2, FileText, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-// UPDATED: Import format
+// UPDATED: Import format and subDays
 import { format, formatDistanceToNow, subDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 // UPDATED: Import 'where' and 'Timestamp'
-import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore'; 
 import { COLLECTIONS } from '@/services/inventory_service';
 import {
   DropdownMenu,
@@ -49,6 +49,33 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+// NEW: Import the report sheet
+import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
 import {
   AlertDialog,
   AlertDialogCancel,
