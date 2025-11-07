@@ -12,6 +12,7 @@ import {
   Group,
   Menu,
   LogIn,
+  Users,
 } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import { users } from '@/lib/data';
@@ -39,6 +40,7 @@ const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin' },
   { href: '/operations', icon: Group, label: 'Operations' },
   { href: '/production', icon: Factory, label: 'Production' },
+  { href: '/sales', icon: Users, label: 'Sales' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
