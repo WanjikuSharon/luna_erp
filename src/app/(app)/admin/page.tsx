@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-// UPDATED: Import DailySalesReport, DailySalesLedgerEntry and ProductionBatch
+// UPDATED: Import DailySalesReport and ProductionBatch
 import type { User, Activity, DailySalesReport, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2, FileText, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,48 +76,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 // NEW: Import the report sheet
 import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-// NEW: Import the report sheet
-import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
 
-// Role config from original file
+// (Role config and other constants are unchanged)
 const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
     operations_manager: { label: 'Operations Manager', variant: 'default' as const },
     production_personnel: { label: 'Production', variant: 'secondary' as const },
 };
-// NEW: Create a list of roles for the dropdown
-const userRoles = ['admin', 'operations_manager', 'production_personnel'] as const;
-
-// NEW: Schema for the edit user form
+const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
 const editUserSchema = z.object({
-  role: z.enum(['admin', 'operations_manager', 'production_personnel'], {
-    required_error: "Please select a role.",
-  }),
+  role: z.enum(userRoles),
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
@@ -125,110 +93,102 @@ type EditUserFormValues = z.infer<typeof editUserSchema>;
 export default function AdminDashboardPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-
-    // NEW: Get the currently logged-in admin (for logging)
     const { user: adminUser } = useUser();
     
     // --- UPDATED: Fetch All Data for Dashboard ---
     const usersRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.USERS), [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersRef);
-
+    
     // Get timestamp for 24 hours ago
     const oneDayAgo = subDays(new Date(), 1);
     const oneDayAgoTimestamp = Timestamp.fromDate(oneDayAgo);
 
-    // Query for admin activities in the last 24h
+    // Query for admin activities
     const adminActivitiesRef = useMemoFirebase(
-      () => query(
-        collection(firestore, 'admin_activities'), 
-        where('timestamp', '>=', oneDayAgoTimestamp),
-        orderBy('timestamp', 'desc')
-      ),
+      () => query(collection(firestore, 'admin_activities'), where('timestamp', '>=', oneDayAgoTimestamp)),
       [firestore, oneDayAgoTimestamp]
     );
     const { data: adminActivities, isLoading: isLoadingAdminActivities } = useCollection<Activity>(adminActivitiesRef);
 
-    // Query for operations activities in the last 24h
+    // Query for operations activities
     const opsActivitiesRef = useMemoFirebase(
-      () => query(
-        collection(firestore, 'operations_activities'), 
-        where('timestamp', '>=', oneDayAgoTimestamp),
-        orderBy('timestamp', 'desc')
-      ),
+      () => query(collection(firestore, 'operations_activities'), where('timestamp', '>=', oneDayAgoTimestamp)),
       [firestore, oneDayAgoTimestamp]
     );
     const { data: opsActivities, isLoading: isLoadingOpsActivities } = useCollection<Activity>(opsActivitiesRef);
     
-    // Query for production batches in the last 24h
+    // Query for production batches
     const prodBatchesRef = useMemoFirebase(
-      () => query(
-        collection(firestore, 'production_batches'), 
-        where('createdAt', '>=', oneDayAgoTimestamp),
-        orderBy('createdAt', 'desc')
-      ),
+      () => query(collection(firestore, 'production_batches'), where('createdAt', '>=', oneDayAgoTimestamp)),
       [firestore, oneDayAgoTimestamp]
     );
     const { data: prodBatches, isLoading: isLoadingProdBatches } = useCollection<ProductionBatch>(prodBatchesRef);
 
-    // --- NEW: Fetch Daily Sales Reports ---
+    // NEW: Query for sales ledger entries
+    const salesLedgerRef = useMemoFirebase(
+      () => query(collection(firestore, 'daily_sales_ledger'), where('createdAt', '>=', oneDayAgoTimestamp)),
+      [firestore, oneDayAgoTimestamp]
+    );
+    const { data: salesLedgerEntries, isLoading: isLoadingSalesLedger } = useCollection<DailySalesLedgerEntry>(salesLedgerRef);
+
+    // NEW: Query for van stock logs
+    const vanStockRef = useMemoFirebase(
+      () => query(collection(firestore, 'van_stock_logs'), where('createdAt', '>=', oneDayAgoTimestamp)),
+      [firestore, oneDayAgoTimestamp]
+    );
+    const { data: vanStockLogs, isLoading: isLoadingVanStock } = useCollection<any>(vanStockRef); // Using 'any' for simplicity
+
+    // --- NEW: Fetch Daily Sales Reports (for the new card) ---
     const salesReportsRef = useMemoFirebase(
       () => query(collection(firestore, 'daily_sales_records'), orderBy('date', 'desc')),
       [firestore]
     );
     const { data: dailySalesReports, isLoading: isLoadingSalesReports } = useCollection<DailySalesReport>(salesReportsRef);
 
-    // Combine all activities for the "System Audit Log"
-    // Note: We're only showing admin activities in the log for now, but we'll count all of them.
-    const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesReports;
-    
-    // Separate loading state for activities only (to prevent flickering)
-    const isLoadingActivities = isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches;
+    // Combine all loading states
+    const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesLedger || isLoadingVanStock || isLoadingSalesReports;
 
-    // --- NEW: Calculate "System Activities (24h)" ---
+    // --- UPDATED: Calculate "System Activities (24h)" ---
     const totalActivities24h = useMemo(() => {
         const adminCount = adminActivities?.length || 0;
         const opsCount = opsActivities?.length || 0;
         const prodCount = prodBatches?.length || 0;
-        return adminCount + opsCount + prodCount;
-    }, [adminActivities, opsActivities, prodBatches]);
+        const salesLedgerCount = salesLedgerEntries?.length || 0;
+        const vanStockCount = vanStockLogs?.length || 0;
+        return adminCount + opsCount + prodCount + salesLedgerCount + vanStockCount;
+    }, [adminActivities, opsActivities, prodBatches, salesLedgerEntries, vanStockLogs]);
 
-    // --- NEW: State for Edit/Delete dialogs ---
+
+    // --- State for Edit/Delete dialogs (Unchanged) ---
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
     // --- NEW: State for viewing a sales report ---
     const [viewingReport, setViewingReport] = useState<DailySalesReport | null>(null);
 
-    // --- NEW: Centralized Activity Logger ---
+    // (Activity Logger - unchanged)
     const logAdminActivity = async (action: string) => {
-      // Find the admin's name from the live 'users' list
-      const fakeAdminId = 'user-1'; // Fallback to Mark Maina
-      const currentAdminId = adminUser ? adminUser.uid : fakeAdminId;
-      // We use the live 'users' list to find the name
-      const currentUser = users?.find(u => u.id === currentAdminId); 
-      
-      const userName = currentUser?.name || 'Admin System';
-      const userAvatar = currentUser?.avatarUrl || '';
-
-      try {
-        await addDoc(collection(firestore, 'admin_activities'), {
-          action: action,
-          user: { name: userName, avatarUrl: userAvatar },
-          timestamp: serverTimestamp(),
-        });
-      } catch (error) {
-        console.error("Failed to log admin activity:", error);
-      }
+        const fakeAdminId = 'user-1'; 
+        const currentAdminId = adminUser ? adminUser.uid : fakeAdminId;
+        const currentUser = users?.find(u => u.id === currentAdminId); 
+        const userName = currentUser?.name || 'Admin System';
+        const userAvatar = currentUser?.avatarUrl || '';
+        try {
+            await addDoc(collection(firestore, 'admin_activities'), {
+            action: action,
+            user: { name: userName, avatarUrl: userAvatar },
+            timestamp: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error("Failed to log admin activity:", error);
+        }
     };
 
-    // --- NEW: Handle Delete User ---
+    // (Delete User Handler - unchanged)
     async function handleDeleteUser() {
       if (!deletingUser) return;
       try {
-        // We delete the user's data document.
-        // NOTE: This does NOT delete their Firebase Auth account.
         const docRef = doc(firestore, COLLECTIONS.USERS, deletingUser.id);
         await deleteDoc(docRef);
-        
         await logAdminActivity(`deleted user: ${deletingUser.name} (${deletingUser.email})`);
         toast({ title: "User Deleted", description: `${deletingUser.name} has been removed.` });
       } catch (error) {
@@ -241,7 +201,7 @@ export default function AdminDashboardPage() {
 
 
   return (
-    <> {/* UPDATED: Wrapped in Fragment to allow dialogs at the end */}
+    <>
     <div className="flex flex-col gap-6">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Dashboard</h1>
@@ -272,39 +232,45 @@ export default function AdminDashboardPage() {
               <ActivityIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {/* UPDATED: Use specific loading state to prevent flickering */}
-              {isLoadingActivities ? (
+              {isLoading ? (
                  <Skeleton className="h-8 w-16" />
               ) : (
                 <div className="text-2xl font-bold">{totalActivities24h}</div> 
               )}
-              <p className="text-xs text-muted-foreground">in the last 24 hours</p>
+              <p className="text-xs text-muted-foreground">all module activities</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <CardTitle className="text-sm font-medium">Total Sales (Today)</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div> 
-              <p className="text-xs text-muted-foreground">require immediate attention</p>
+              {/* NEW: Calculate total sales from ledger entries */}
+              {isLoadingSalesLedger ? (
+                 <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="text-2xl font-bold">
+                  KSh { (salesLedgerEntries ?? []).reduce((acc, sale) => acc + sale.amountSold, 0).toLocaleString() }
+                </div> 
+              )}
+              <p className="text-xs text-muted-foreground">from all sales agents</p>
             </CardContent>
           </Card>
            <Card>
             <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Security Events</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Security Alerts</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div> 
-              <p className="text-xs text-muted-foreground">in the last 7 days</p>
+              <p className="text-xs text-muted-foreground">e.g., failed logins (TODO)</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-            {/* --- UPDATED: User Management Card --- */}
+            {/* --- User Management Card (Unchanged) --- */}
             <Card>
                 <CardHeader>
                     <CardTitle>User Management</CardTitle>
@@ -314,16 +280,12 @@ export default function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent>
                 {isLoadingUsers ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
+                  <Skeleton className="h-40 w-full" />
                 ) : (
                   <Table>
                       <TableHeader>
                       <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
                           <TableHead>Role</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -334,22 +296,21 @@ export default function AdminDashboardPage() {
                           <TableCell>
                               <div className="flex items-center gap-3">
                                   <Avatar className="h-9 w-9">
-                                      {/* Use user.avatarUrl, fallback to newLogoUrl or name */}
                                       <AvatarImage src={user.avatarUrl} alt={user.name} />
                                       <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                                   </Avatar>
-                                  <span className="font-medium">{user.name}</span>
+                                  <div>
+                                    <span className="font-medium">{user.name}</span>
+                                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                                  </div>
                               </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
-                              {/* Use roleConfig, provide a default if role is not in config */}
                               <Badge variant={roleConfig[user.role]?.variant || 'default'}>
                                   {roleConfig[user.role]?.label || user.role}
                               </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                              {/* UPDATED: Replaced Button with DropdownMenu */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
@@ -399,30 +360,29 @@ export default function AdminDashboardPage() {
                             No daily sales reports have been submitted yet.
                           </p>
                         )}
-                        {(dailySalesReports ?? []).length > 0 && (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Salesperson</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Salesperson</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(dailySalesReports ?? []).map((report: DailySalesReport) => (
+                              <TableRow key={report.id}>
+                                <TableCell className="font-medium">{report.salespersonName}</TableCell>
+                                <TableCell>{format(report.date.toDate(), 'PPP')}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button variant="outline" size="sm" onClick={() => setViewingReport(report)}>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    View & Print
+                                  </Button>
+                                </TableCell>
                               </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {(dailySalesReports ?? []).map((report: DailySalesReport) => (
-                                <TableRow key={report.id}>
-                                  <TableCell className="font-medium">{report.salespersonName}</TableCell>
-                                  <TableCell>{format(report.date.toDate(), 'PPP')}</TableCell>
-                                  <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" onClick={() => setViewingReport(report)}>
-                                      View & Print
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        )}
+                            ))}
+                          </TableBody>
+                        </Table>
                       </>
                     )}
                 </CardContent>
@@ -430,7 +390,7 @@ export default function AdminDashboardPage() {
         </div>
     </div>
 
-    {/* --- NEW: Render the dialogs for Edit/Delete User --- */}
+    {/* --- Dialogs for User Management (Unchanged) --- */}
     <EditUserDialog
       user={editingUser}
       onOpenChange={() => setEditingUser(null)}
@@ -447,12 +407,12 @@ export default function AdminDashboardPage() {
       report={viewingReport}
       onOpenChange={() => setViewingReport(null)}
     />
-    </> // UPDATED: Close fragment
+    </> 
   );
 }
 
 
-// --- NEW: EditUserDialog Component ---
+// --- EditUserDialog Component (Unchanged, omitted for brevity) ---
 function EditUserDialog({
   user,
   onOpenChange,
@@ -464,12 +424,10 @@ function EditUserDialog({
 }) {
   const { toast } = useToast();
   const firestore = useFirestore();
-
   const editUserForm = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
   });
 
-  // Pre-fill the form when the `user` prop changes
   useEffect(() => {
     if (user) {
       editUserForm.reset({ role: user.role });
@@ -478,18 +436,12 @@ function EditUserDialog({
 
   async function onSubmitEditUser(data: EditUserFormValues) {
     if (!user) return;
-
     try {
       const docRef = doc(firestore, COLLECTIONS.USERS, user.id);
-      await updateDoc(docRef, {
-        role: data.role,
-      });
-      
-      // Log this action
+      await updateDoc(docRef, { role: data.role });
       await onUserUpdated(`changed role for ${user.name} to ${data.role}`);
-      
       toast({ title: "User Role Updated", description: `${user.name}'s role has been set to ${data.role}.` });
-      onOpenChange(); // Close the dialog
+      onOpenChange();
     } catch (error) {
       console.error("Error updating user role:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update user role." });
@@ -545,7 +497,7 @@ function EditUserDialog({
   );
 }
 
-// --- NEW: DeleteUserAlert Component ---
+// --- DeleteUserAlert Component (Unchanged, omitted for brevity) ---
 function DeleteUserAlert({
   user,
   onOpenChange,
@@ -556,13 +508,11 @@ function DeleteUserAlert({
   onDelete: () => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
-
   const handleDelete = async () => {
     setIsDeleting(true);
     await onDelete();
     setIsDeleting(false);
   }
-
   return (
     <AlertDialog open={!!user} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -571,7 +521,7 @@ function DeleteUserAlert({
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the user
             <strong className="mx-1">{user?.name}</strong>
-            from the Firestore database. This does NOT delete their authentication account.
+            from the Firestore database.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
