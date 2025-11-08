@@ -1,0 +1,161 @@
+// src/services/user_service.ts
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  serverTimestamp,
+  Firestore 
+} from 'firebase/firestore';
+import type { User as FirebaseUser } from 'firebase/auth';
+import type { User } from '@/lib/types';
+
+export const USERS_COLLECTION = 'users';
+
+/**
+ * Syncs a Firebase Auth user to the Firestore users collection.
+ * Creates a new user document if it doesn't exist, or updates lastLogin if it does.
+ */
+export async function syncUserToFirestore(
+  firestore: Firestore, 
+  authUser: FirebaseUser
+): Promise<void> {
+  const userRef = doc(firestore, USERS_COLLECTION, authUser.uid);
+  
+  try {
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      // User exists, just update lastLogin
+      await updateDoc(userRef, {
+        lastLogin: serverTimestamp(),
+        // Optionally update email/displayName/photoURL if they changed
+        email: authUser.email || userSnap.data().email,
+        displayName: authUser.displayName || userSnap.data().displayName,
+        photoURL: authUser.photoURL || userSnap.data().photoURL || '',
+      });
+      console.log(`User ${authUser.uid} login updated`);
+    } else {
+      // New user, create the document
+      const newUser: Omit<User, 'uid'> = {
+        email: authUser.email || '',
+        displayName: authUser.displayName || authUser.email?.split('@')[0] || 'User',
+        role: 'operations', // Default role - should be updated by admin
+        department: '',
+        photoURL: authUser.photoURL || '',
+        phoneNumber: authUser.phoneNumber || '',
+        isActive: true,
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        notificationSettings: {
+          receiveEmails: true,
+          reportFrequency: 'daily',
+        },
+      };
+      
+      await setDoc(userRef, newUser);
+      console.log(`New user ${authUser.uid} created in Firestore`);
+    }
+  } catch (error) {
+    console.error('Error syncing user to Firestore:', error);
+    throw error;
+  }
+}
+
+/**
+ * Gets a user's role from Firestore.
+ * Returns null if the user doesn't exist.
+ */
+export async function getUserRole(
+  firestore: Firestore, 
+  uid: string
+): Promise<User['role'] | null> {
+  try {
+    const userRef = doc(firestore, USERS_COLLECTION, uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      return userSnap.data().role as User['role'];
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching user role:', error);
+    return null;
+  }
+}
+
+/**
+ * Gets full user data from Firestore.
+ * Returns null if the user doesn't exist.
+ */
+export async function getUserData(
+  firestore: Firestore, 
+  uid: string
+): Promise<User | null> {
+  try {
+    const userRef = doc(firestore, USERS_COLLECTION, uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      return { uid, ...userSnap.data() } as User;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    return null;
+  }
+}
+
+/**
+ * Updates a user's role (admin only operation).
+ */
+export async function updateUserRole(
+  firestore: Firestore, 
+  uid: string, 
+  newRole: User['role']
+): Promise<void> {
+  try {
+    const userRef = doc(firestore, USERS_COLLECTION, uid);
+    await updateDoc(userRef, { role: newRole });
+    console.log(`User ${uid} role updated to ${newRole}`);
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
+  }
+}
+
+/**
+ * Deactivates a user account (admin only operation).
+ */
+export async function deactivateUser(
+  firestore: Firestore, 
+  uid: string
+): Promise<void> {
+  try {
+    const userRef = doc(firestore, USERS_COLLECTION, uid);
+    await updateDoc(userRef, { isActive: false });
+    console.log(`User ${uid} deactivated`);
+  } catch (error) {
+    console.error('Error deactivating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Gets a user's display name for showing in UI.
+ * Falls back to email or "Unknown User" if not found.
+ */
+export async function getUserDisplayName(
+  firestore: Firestore, 
+  uid: string
+): Promise<string> {
+  try {
+    const userData = await getUserData(firestore, uid);
+    return userData?.displayName || userData?.email || 'Unknown User';
+  } catch (error) {
+    console.error('Error fetching user display name:', error);
+    return 'Unknown User';
+  }
+}
