@@ -391,6 +391,45 @@ export default function AdminDashboardPage() {
                 </CardContent>
             </Card>
         </div>
+
+        {/* --- NEW: System-Wide Activity Audit Trail --- */}
+        <Card>
+          <CardHeader>
+            <CardTitle>System Activity Audit Trail</CardTitle>
+            <CardDescription>
+              Combined view of all activities across Admin, Operations, Production, and Sales modules.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CombinedActivityLog
+              queries={[
+                {
+                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.ADMIN),
+                  label: 'Admin',
+                  variant: 'destructive',
+                },
+                {
+                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.OPERATIONS),
+                  label: 'Operations',
+                  variant: 'default',
+                },
+                {
+                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.PRODUCTION),
+                  label: 'Production',
+                  variant: 'secondary',
+                },
+                {
+                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.SALES),
+                  label: 'Sales',
+                  variant: 'outline',
+                },
+              ]}
+              maxItems={50}
+              showSourceBadges={true}
+              emptyMessage="No system activities logged yet."
+            />
+          </CardContent>
+        </Card>
     </div>
 
     {/* --- Dialogs for User Management (Unchanged) --- */}
