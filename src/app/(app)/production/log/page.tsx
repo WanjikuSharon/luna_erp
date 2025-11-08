@@ -180,7 +180,7 @@ async function fetchHistoricalUsageData(
 export default function LogProductionPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   // --- UPDATED: Add state for the AI Dialog ---
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
@@ -195,7 +195,7 @@ export default function LogProductionPage() {
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
   const { data: packagingMaterials, isLoading: isLoadingPackaging } = useCollection<PackagingMaterial>(packagingRef);
 
-  const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging;
+  const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging || isUserLoading;
 
   // --- Form Setup (Unchanged) ---
   const form = useForm<BatchFormValues>({
