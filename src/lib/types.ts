@@ -6,13 +6,29 @@ export type NotificationSettings = {
   reportFrequency: 'daily' | 'weekly' | 'never';
 };
 
-export type User = {
+// Legacy User type (for mock data compatibility)
+export type LegacyUser = {
   id: string;
   name: string;
   email: string;
   role: 'admin' | 'operations_manager' | 'production_personnel';
   avatarUrl: string;
-  notificationSettings?: NotificationSettings; // Added
+  notificationSettings?: NotificationSettings;
+};
+
+// Firestore User type (for authenticated users)
+export type User = {
+  uid: string; // Firebase Auth UID
+  email: string;
+  displayName: string;
+  role: 'admin' | 'sales' | 'operations' | 'production';
+  department?: string;
+  photoURL?: string;
+  phoneNumber?: string;
+  isActive: boolean;
+  createdAt: any; // Firestore Timestamp
+  lastLogin: any; // Firestore Timestamp
+  notificationSettings?: NotificationSettings;
 };
 
 // --- Inventory & Vendors ---
@@ -63,6 +79,7 @@ export type MaterialRequest = {
   unit: string; // Added
   vendorId: string; // Added
   requestedBy: string;
+  requestedByName: string; // Name of requester at time of request
   status: 'pending' | 'approved' | 'delivered' | 'rejected';
   createdAt: any; // For Firestore Timestamp
   updatedAt: any; // For Firestore Timestamp
@@ -207,8 +224,8 @@ export type DailySalesLedgerEntry = {
   agentPhone: string;
   productsSold: number; // The "6", "3", "5"
   amountSold: number; // The "1880", "620", "11250"
-  // "Signature" will be handled by auth (knowing *who* submitted it)
-  submittedBy: string; // User ID of submitter (Maina Kinyua)
+  submittedBy: string; // User ID of submitter
+  submittedByName: string; // Name of submitter at time of submission
   createdAt: any; // Firestore Timestamp
 };
 
@@ -226,7 +243,8 @@ export type VanStockLog = {
   type: 'out' | 'in'; // Stock Out or Stock In
   agentId: string;
   agentName: string;
-  submittedBy: string; // User ID of submitter (Maina Kinyua)
+  submittedBy: string; // User ID of submitter
+  submittedByName: string; // Name of submitter at time of submission
   items: VanStockItem[]; // Array of products
   createdAt: any; // Firestore Timestamp
 };
