@@ -45,7 +45,6 @@ import {
 } from '@/firebase';
 import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
-import { users as mockUsers } from '@/lib/data'; // For user names
 import {
   Form,
   FormControl,

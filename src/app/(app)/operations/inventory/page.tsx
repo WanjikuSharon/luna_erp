@@ -66,7 +66,6 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import type { RawMaterial, Vendor } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
-import { users as mockUsers } from '@/lib/data'; 
 
 // --- Schemas ---
 const requestFormSchema = z.object({
@@ -138,14 +137,14 @@ export default function VendorsAndMaterialsPage() {
   // --- UPDATED: Centralized Activity Logger ---
   const { user: authUser } = useUser();
   const logOperationActivity = async (action: string) => {
-    // Find the user's name from the mock data list (since we bypassed login)
-    // In a real app, you'd get this from the 'users' collection using user.uid
-    const fakeUserId = 'user-2'; // Mercy (Operations)
-    const currentUserId = authUser ? authUser.uid : fakeUserId;
-    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+    // Require authentication for logging activities
+    if (!authUser) {
+      console.warn("Cannot log activity: User not authenticated");
+      return;
+    }
 
-    const userName = currentUser?.name || 'System';
-    const userAvatar = currentUser?.avatarUrl || '';
+    const userName = authUser.displayName || authUser.email || 'Operations User';
+    const userAvatar = authUser.photoURL || '';
 
     try {
       await addDoc(collection(firestore, 'operations_activities'), {
@@ -161,13 +160,19 @@ export default function VendorsAndMaterialsPage() {
 
   // --- UPDATED: onSubmit Functions (now with logging) ---
   async function onSubmitRequest(data: RequestFormValues) {
-    const fakeUserId = 'user-2';
-    const currentUserId = user ? user.uid : fakeUserId;
-    const requester = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+    // Require authentication
+    if (!authUser) {
+      toast({ variant: "destructive", title: "Authentication Required", description: "You must be logged in to submit a request." });
+      return;
+    }
+
+    const currentUserId = authUser.uid;
+    const userName = authUser.displayName || authUser.email || 'Unknown User';
+    
     const material = rawMaterials?.find(m => m.id === data.materialId);
     const vendor = vendors?.find(v => v.id === data.vendorId);
-    if (!requester || !material || !vendor) {
-        toast({ variant: "destructive", title: "Data Error", description: "Could not find user, material, or vendor details." });
+    if (!material || !vendor) {
+        toast({ variant: "destructive", title: "Data Error", description: "Could not find material or vendor details." });
         return;
     }
     let newRequestId: string | null = null;
@@ -194,7 +199,7 @@ export default function VendorsAndMaterialsPage() {
           requestId: newRequestId,
           materialName: material.name,
           quantity: data.quantity,
-          requesterName: requester.name,
+          requesterName: userName,
           vendorName: vendor.name,
           requestUrl: `${window.location.origin}/operations/requests?requestId=${newRequestId}`,
       }).catch(flowError => {

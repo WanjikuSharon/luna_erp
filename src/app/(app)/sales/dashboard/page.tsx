@@ -54,7 +54,6 @@ import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebas
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, Timestamp, serverTimestamp } from 'firebase/firestore'; 
 import type { Salesperson, DailySalesLedgerEntry } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
-import { users as mockUsers } from '@/lib/data'; // For user names
 
 // --- Form Schema for "Add/Edit Salesperson" ---
 const salespersonFormSchema = z.object({
@@ -141,11 +140,14 @@ export default function SalesDashboardPage() {
 
   // --- Activity Logger ---
   const logSalesActivity = async (action: string) => {
-    const fakeSubmitterId = 'user-5'; // Maina Kinyua
-    const currentUserId = authUser ? authUser.uid : fakeSubmitterId;
-    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeSubmitterId);
-    const userName = currentUser?.name || 'Sales Manager';
-    const userAvatar = currentUser?.avatarUrl || '';
+    // Require authentication for logging activities
+    if (!authUser) {
+      console.warn("Cannot log activity: User not authenticated");
+      return;
+    }
+
+    const userName = authUser.displayName || authUser.email || 'Sales Manager';
+    const userAvatar = authUser.photoURL || '';
 
     try {
       await addDoc(collection(firestore, 'sales_activities'), {

@@ -53,7 +53,6 @@ import {
   increment,
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
-import { users as mockUsers } from '@/lib/data'; // For user names
 
 // Zod Schema for the Stock In form
 const stockInSchema = z.object({
@@ -103,7 +102,12 @@ export default function StockInPage() {
       return;
     }
 
-    const submitterId = authUser ? authUser.uid : 'user-5'; // Default to Maina Kinyua
+    // Require authentication
+    const submitterId = authUser?.uid;
+    if (!submitterId) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to receive stock." });
+      return;
+    }
     
     try {
       // --- This is the Firebase Transaction ---

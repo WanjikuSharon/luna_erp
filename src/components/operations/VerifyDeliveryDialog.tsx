@@ -7,7 +7,6 @@ import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/fi
 import { COLLECTIONS } from '@/services/inventory_service';
 import type { MaterialRequest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { users as mockUsers } from '@/lib/data';
 
 import {
   Dialog,
@@ -125,17 +124,18 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
 
       // UPDATED: Log this action
       try {
-        const fakeUserId = 'user-2'; // Mercy (Operations)
-        const currentUserId = authUser ? authUser.uid : fakeUserId;
-        const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
-        const userName = currentUser?.name || 'System';
-        const userAvatar = currentUser?.avatarUrl || '';
+        if (!authUser) {
+          console.warn("Cannot log activity: User not authenticated");
+        } else {
+          const userName = authUser.displayName || authUser.email || 'Operations User';
+          const userAvatar = authUser.photoURL || '';
 
-        await addDoc(collection(firestore, 'operations_activities'), {
-          action: `verified delivery for request ID ${request.id}.`,
-          user: { name: userName, avatarUrl: userAvatar },
-          timestamp: serverTimestamp(),
-        });
+          await addDoc(collection(firestore, 'operations_activities'), {
+            action: `verified delivery for request ID ${request.id}.`,
+            user: { name: userName, avatarUrl: userAvatar },
+            timestamp: serverTimestamp(),
+          });
+        }
       } catch (logError) {
         console.error("Failed to log activity:", logError);
       }

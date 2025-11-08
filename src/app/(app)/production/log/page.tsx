@@ -64,7 +64,6 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
-import { users as mockUsers } from '@/lib/data';
 import type { ProductionBatch } from '@/lib/types';
 
 // UPDATED: Import the AI dialog and flow
@@ -241,9 +240,14 @@ export default function LogProductionPage() {
 
   // --- UPDATED: onSubmit Function ---
   async function onSubmit(data: BatchFormValues) {
-    const fakeUserId = 'user-3';
-    const currentUserId = user ? user.uid : fakeUserId;
-    const currentUser = mockUsers.find(u => u.id === currentUserId || u.id === fakeUserId);
+    // Require authentication
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication Required", description: "You must be logged in to log a production batch." });
+      return;
+    }
+
+    const currentUserId = user.uid;
+    const userName = user.displayName || user.email || 'Production User';
 
     // --- 1. Run the Inventory Transaction (Unchanged) ---
     try {
@@ -309,12 +313,12 @@ export default function LogProductionPage() {
                   batchNo: data.batchNumber,
               },
               analysisItems: data.qcEndAnalysisItems,
-              problems: data.qcEndProblems || '',
-              improvement: data.qcEndImprovement || '',
+          problems: data.qcEndProblems || '',
+          improvement: data.qcEndImprovement || '',
           },
           status: 'Completed' as const,
           createdBy: currentUserId,
-          createdByName: currentUser?.name || 'Unknown User',
+          createdByName: userName,
           createdAt: serverTimestamp(),
         };
         transaction.set(batchRef, newBatchData);

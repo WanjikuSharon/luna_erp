@@ -25,7 +25,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
-import { users as mockUsers } from '@/lib/data'; // For user names
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDialog';
@@ -52,7 +51,7 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: 
   vendorNameMap: Record<string, string>,
   onVerifyClick: (request: MaterialRequest) => void;
 }) {
-  const requester = mockUsers.find(u => u.id === request.requestedBy); // Still mock users
+  // Display the user ID directly (or could be enhanced with a users collection lookup)
   const status = statusConfig[request.status];
 
   return (
@@ -68,8 +67,8 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: 
         </Badge>
       </TableCell>
       <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Vendor'}</TableCell> {/* Added vendor */}
-      <TableCell>{requester?.name || request.requestedBy}</TableCell>
-      <TableCell className="text-right text-muted-foreground">
+      <TableCell className="text-sm text-muted-foreground">{request.requestedBy || 'Unknown'}</TableCell>
+      <TableCell className="text-sm text-muted-foreground">
         {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
       </TableCell>
       {/* UPDATED: This cell now shows different buttons based on status */}
