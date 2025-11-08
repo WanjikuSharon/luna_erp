@@ -4,7 +4,8 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { syncUserToFirestore } from '@/services/user_service';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -78,8 +79,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      async (firebaseUser) => { // Auth state determined
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        
+        // Sync user to Firestore when they log in
+        if (firebaseUser && firestore) {
+          try {
+            await syncUserToFirestore(firestore, firebaseUser);
+          } catch (error) {
+            console.error("Failed to sync user to Firestore:", error);
+            // Don't block login on sync failure
+          }
+        }
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
@@ -87,7 +98,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     );
     return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  }, [auth, firestore]); // Depends on the auth and firestore instances
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
