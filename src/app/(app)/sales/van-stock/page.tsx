@@ -28,7 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Salesperson, VanStockLog, VanStockItem } from '@/lib/types';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { Package, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -57,15 +57,24 @@ export default function VanStockPage() {
     () => selectedAgentId
       ? query(
           collection(firestore, 'van_stock_logs'),
-          where('agentId', '==', selectedAgentId),
-          orderBy('date', 'desc')
+          where('agentId', '==', selectedAgentId)
         )
       : null,
     [firestore, selectedAgentId]
   );
-  const { data: vanStockLogs, isLoading: isLoadingLogs } = useCollection<VanStockLog>(
+  const { data: vanStockLogsRaw, isLoading: isLoadingLogs } = useCollection<VanStockLog>(
     vanStockLogsRef || undefined
   );
+
+  // Sort the logs by date in JavaScript (to avoid needing a Firestore composite index)
+  const vanStockLogs = useMemo(() => {
+    if (!vanStockLogsRaw) return null;
+    return [...vanStockLogsRaw].sort((a, b) => {
+      const dateA = a.date?.toDate?.()?.getTime() || 0;
+      const dateB = b.date?.toDate?.()?.getTime() || 0;
+      return dateB - dateA; // Descending order (newest first)
+    });
+  }, [vanStockLogsRaw]);
 
   // --- Calculate Current Van Inventory ---
   const vanInventory = useMemo<VanInventoryItem[]>(() => {
