@@ -97,7 +97,7 @@ type RawMaterialFormValues = z.infer<typeof rawMaterialFormSchema>;
 export default function VendorsAndMaterialsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
@@ -112,7 +112,9 @@ export default function VendorsAndMaterialsPage() {
   const vendorsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.VENDORS), [firestore]); 
   
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
-  const { data: vendors, isLoading: isLoadingVendors } = useCollection<Vendor>(vendorsRef); 
+  const { data: vendors, isLoading: isLoadingVendors } = useCollection<Vendor>(vendorsRef);
+  
+  const isLoading = isLoadingMaterials || isLoadingVendors || isUserLoading; 
 
   const filteredVendors = useMemo(() => {
     if (!vendors) return [];
@@ -183,6 +185,7 @@ export default function VendorsAndMaterialsPage() {
         unit: data.unit,
         vendorId: data.vendorId,
         requestedBy: currentUserId,
+        requestedByName: userName,
         status: 'pending' as const,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
