@@ -88,7 +88,7 @@ const roleConfig = {
 };
 const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
 const editUserSchema = z.object({
-  role: z.enum(userRoles),
+  role: z.enum(['admin', 'operations_manager', 'production_personnel'] as const),
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
