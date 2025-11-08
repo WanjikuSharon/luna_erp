@@ -76,6 +76,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 // NEW: Import the report sheet
 import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
+// NEW: Import the combined activity log
+import { CombinedActivityLog } from '@/components/CombinedActivityLog';
+import { ACTIVITY_COLLECTIONS, createActivityQuery } from '@/lib/activity-utils';
 
 // (Role config and other constants are unchanged)
 const roleConfig = {
