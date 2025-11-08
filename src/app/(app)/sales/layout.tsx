@@ -9,6 +9,7 @@ import {
   PackageCheck,
   PackageOpen,
   BookMarked,
+  Package,
 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,11 @@ const sidebarNavItems = [
     title: 'Stock In / Returns', // Form from 1000497323.jpg
     href: '/sales/stock-in',
     icon: PackageCheck,
+  },
+  {
+    title: 'Van Stock Inventory', // NEW: Van stock view
+    href: '/sales/van-stock',
+    icon: Package,
   },
   {
     title: 'Daily Sales Ledger', // Form from 1000497324.jpg
