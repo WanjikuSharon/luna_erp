@@ -8,11 +8,18 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-
-// We will fetch from 'production_activities' collection here later
-// For now, it's just a placeholder.
+import { ActivityLog } from '@/components/ActivityLog';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { ACTIVITY_COLLECTIONS, createActivityQuery } from '@/lib/activity-utils';
 
 export default function ActivityLogPage() {
+  const firestore = useFirestore();
+  
+  const productionActivityQuery = useMemoFirebase(
+    () => createActivityQuery(firestore, ACTIVITY_COLLECTIONS.PRODUCTION),
+    [firestore]
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -25,11 +32,14 @@ export default function ActivityLogPage() {
         <CardHeader>
           <CardTitle>Live Activity Feed</CardTitle>
           <CardDescription>
-            This feature is under construction.
+            All production activities including batch creation, QC approvals, and packaging operations.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>This page will soon show a list of all activities, like "Batch B-1045 created," "QC Approved," etc.</p>
+          <ActivityLog 
+            query={productionActivityQuery}
+            emptyMessage="No production activities have been logged yet."
+          />
         </CardContent>
       </Card>
     </div>
