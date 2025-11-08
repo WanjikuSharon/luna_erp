@@ -56,10 +56,16 @@ import {
   increment,
   addDoc,
   serverTimestamp,
-  getDoc, // UPDATED: Import getDoc to fetch the recipe
+  getDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { users as mockUsers } from '@/lib/data';
+import type { ProductionBatch } from '@/lib/types';
 
 // UPDATED: Import the AI dialog and flow
 import { AiSuggestionDialog } from '@/components/production/ai-suggestion-dialog';
@@ -113,6 +119,63 @@ const batchFormSchema = z.object({
   })).min(1, 'Add at least one packaging material.'),
 });
 type BatchFormValues = z.infer<typeof batchFormSchema>;
+
+/**
+ * Helper function to fetch historical usage data for a specific product and material
+ * @param firestore - Firestore instance
+ * @param productId - The product ID to search for
+ * @param materialId - The raw material ID to search for
+ * @returns A formatted string with historical usage data
+ */
+async function fetchHistoricalUsageData(
+  firestore: any,
+  productId: string,
+  materialId: string
+): Promise<string> {
+  try {
+    // Query the last 10 production batches for this product, ordered by creation date
+    const batchesRef = collection(firestore, 'production_batches');
+    const q = query(
+      batchesRef,
+      where('productId', '==', productId),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return 'No historical production data available for this product.';
+    }
+
+    // Extract usage data for the specific material
+    const usageRecords: string[] = [];
+    querySnapshot.forEach((doc) => {
+      const batch = doc.data() as Omit<ProductionBatch, 'id'>;
+      
+      // Find the material in this batch's rawMaterialsUsed
+      const materialUsage = batch.rawMaterialsUsed?.find(
+        (m) => m.materialId === materialId
+      );
+      
+      if (materialUsage && batch.batchNumber) {
+        usageRecords.push(
+          `Batch ${batch.batchNumber}: used ${materialUsage.quantity}${batch.rawMaterialsUsed[0]?.name ? '' : ' units'}`
+        );
+      }
+    });
+
+    if (usageRecords.length === 0) {
+      return `This material hasn't been used in recent batches of this product.`;
+    }
+
+    // Return a formatted string
+    return usageRecords.join(', ');
+  } catch (error) {
+    console.error('Error fetching historical usage data:', error);
+    return 'Unable to retrieve historical data at this time.';
+  }
+}
 
 
 export default function LogProductionPage() {
@@ -287,13 +350,19 @@ export default function LogProductionPage() {
             console.log(`Discrepancy found for ${usedMaterial.materialId}!`);
             const materialName = rawMaterials?.find(rm => rm.id === usedMaterial.materialId)?.name || 'Unknown Material';
             
+            // Fetch real historical usage data from Firestore
+            const historicalData = await fetchHistoricalUsageData(
+              firestore,
+              data.productId,
+              usedMaterial.materialId
+            );
+            
             // Set the data for the AI dialog
             setDiscrepancyData({
               rawMaterial: materialName,
               reportedQuantityUsed: reportedQuantityUsed,
               expectedQuantityUsed: expectedQuantityUsed,
-              // We can make this historical data better later
-              historicalUsageData: 'Recent batches have shown consistent usage.',
+              historicalUsageData: historicalData,
             });
             setIsAiDialogOpen(true); // Open the AI dialog
             discrepancyFound = true;
