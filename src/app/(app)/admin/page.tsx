@@ -148,6 +148,24 @@ export default function AdminDashboardPage() {
     );
     const { data: dailySalesReports, isLoading: isLoadingSalesReports } = useCollection<DailySalesReport>(salesReportsRef);
 
+    // --- NEW: Queries for Combined Activity Log ---
+    const adminActivityQuery = useMemoFirebase(
+      () => createActivityQuery(firestore, ACTIVITY_COLLECTIONS.ADMIN),
+      [firestore]
+    );
+    const operationsActivityQuery = useMemoFirebase(
+      () => createActivityQuery(firestore, ACTIVITY_COLLECTIONS.OPERATIONS),
+      [firestore]
+    );
+    const productionActivityQuery = useMemoFirebase(
+      () => createActivityQuery(firestore, ACTIVITY_COLLECTIONS.PRODUCTION),
+      [firestore]
+    );
+    const salesActivityQuery = useMemoFirebase(
+      () => createActivityQuery(firestore, ACTIVITY_COLLECTIONS.SALES),
+      [firestore]
+    );
+
     // Combine all loading states
     const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesLedger || isLoadingVanStock || isLoadingSalesReports;
 
@@ -404,22 +422,22 @@ export default function AdminDashboardPage() {
             <CombinedActivityLog
               queries={[
                 {
-                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.ADMIN),
+                  query: adminActivityQuery,
                   label: 'Admin',
                   variant: 'destructive',
                 },
                 {
-                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.OPERATIONS),
+                  query: operationsActivityQuery,
                   label: 'Operations',
                   variant: 'default',
                 },
                 {
-                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.PRODUCTION),
+                  query: productionActivityQuery,
                   label: 'Production',
                   variant: 'secondary',
                 },
                 {
-                  query: createActivityQuery(firestore, ACTIVITY_COLLECTIONS.SALES),
+                  query: salesActivityQuery,
                   label: 'Sales',
                   variant: 'outline',
                 },
