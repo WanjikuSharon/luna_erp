@@ -67,7 +67,7 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: 
         </Badge>
       </TableCell>
       <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Vendor'}</TableCell> {/* Added vendor */}
-      <TableCell className="text-sm text-muted-foreground">{request.requestedBy || 'Unknown'}</TableCell>
+      <TableCell className="text-sm">{request.requestedByName || request.requestedBy || 'Unknown'}</TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
       </TableCell>
