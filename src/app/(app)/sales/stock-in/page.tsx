@@ -68,7 +68,7 @@ type StockInFormValues = z.infer<typeof stockInSchema>;
 export default function StockInPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
 
   // --- Data Fetching (Same as Stock Out) ---
   const productsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.PRODUCTS), [firestore]);
@@ -77,7 +77,7 @@ export default function StockInPage() {
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
   const { data: salespeople, isLoading: isLoadingSalespeople } = useCollection<Salesperson>(salespeopleRef);
 
-  const isLoading = isLoadingProducts || isLoadingSalespeople;
+  const isLoading = isLoadingProducts || isLoadingSalespeople || isUserLoading;
 
   // --- Form Setup ---
   const form = useForm<StockInFormValues>({
@@ -104,6 +104,7 @@ export default function StockInPage() {
 
     // Require authentication
     const submitterId = authUser?.uid;
+    const submitterName = authUser?.displayName || authUser?.email || 'Unknown User';
     if (!submitterId) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to receive stock." });
       return;
@@ -141,6 +142,7 @@ export default function StockInPage() {
           agentId: data.agentId,
           agentName: selectedSalesperson.name,
           submittedBy: submitterId,
+          submittedByName: submitterName,
           items: itemsWithNames, // Save the array of items
           createdAt: serverTimestamp(),
         });
