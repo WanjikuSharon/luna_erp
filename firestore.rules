@@ -1,8 +1,147 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get user role from users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function to check if user is active
+    function isUserActive() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    // Helper function to check if user has any of the specified roles
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserRole() in roles;
+    }
+    
+    // --- Users Collection ---
+    // Users can read their own profile, admins can read/write all
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || getUserRole() == 'admin');
+      allow create: if isAuthenticated(); // Auto-created on first login
+      allow update: if isAuthenticated() && (request.auth.uid == userId || getUserRole() == 'admin');
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Products Collection ---
+    // All authenticated users can read, only admins and production can write
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['admin', 'production']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Raw Materials Collection ---
+    match /raw_materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['admin', 'operations', 'production']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Packaging Materials Collection ---
+    match /packaging_materials/{packagingId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['admin', 'operations', 'production']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Vendors Collection ---
+    match /vendors/{vendorId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['admin', 'operations']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Material Requests Collection ---
+    match /requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'operations']);
+      allow update: if isAuthenticated() && hasAnyRole(['admin', 'operations']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Production Batches Collection ---
+    match /production_batches/{batchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'production']);
+      allow update: if isAuthenticated() && hasAnyRole(['admin', 'production']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Product Recipes Collection ---
+    match /product_recipes/{recipeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasAnyRole(['admin', 'production']);
+    }
+    
+    // --- Van Stock Logs (Stock In/Out) ---
+    match /van_stock_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'sales']);
+      allow update: if getUserRole() == 'admin';
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Salespeople Collection ---
+    match /salespeople/{salespersonId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Daily Sales Reports ---
+    match /daily_sales_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'sales']);
+      allow update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Daily Sales Ledger ---
+    match /daily_sales_ledger/{ledgerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'sales']);
+      allow update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Activity Logs (Read-only for most users) ---
+    match /sales_activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if getUserRole() == 'admin';
+    }
+    
+    match /operations_activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if getUserRole() == 'admin';
+    }
+    
+    match /production_activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if getUserRole() == 'admin';
+    }
+    
+    match /admin_activities/{activityId} {
+      allow read: if getUserRole() == 'admin';
+      allow create: if isAuthenticated();
+      allow update, delete: if getUserRole() == 'admin';
+    }
+    
+    // --- Block all other collections by default ---
+    // If you add new collections, add specific rules above
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
