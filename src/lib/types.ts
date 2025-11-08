@@ -76,8 +76,8 @@ export type Activity = {
     avatarUrl: string;
   };
   action: string;
-  timestamp: string;
-  details: string;
+  timestamp: any; // Firestore Timestamp
+  details?: string; // Made optional since not all activities have details
 };
 
 // --- NEW: Types for Production Batch Flow ---
