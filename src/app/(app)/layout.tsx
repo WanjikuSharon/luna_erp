@@ -34,23 +34,88 @@ import {
 } from '@/components/ui/navigation-menu';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const navItems = [
-  { href: '/admin', icon: Shield, label: 'Admin' },
-  { href: '/operations', icon: Group, label: 'Operations' },
-  { href: '/production', icon: Factory, label: 'Production' },
-  { href: '/sales', icon: Users, label: 'Sales' },
+  { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
+  { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations'] },
+  { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production'] },
+  { href: '/sales', icon: Users, label: 'Sales', roles: ['admin', 'sales'] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
 
-  // Always show all nav items for now
-  const filteredNavItems = navItems;
+  // Fetch user data from Firestore to get role
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userDocRef);
+
+  // Filter nav items based on user role
+  const filteredNavItems = userData?.role 
+    ? navItems.filter(item => item.roles.includes(userData.role))
+    : [];
+  
   const dashboardLink = '/';
+
+  // Protect routes - redirect if user tries to access unauthorized page
+  useEffect(() => {
+    if (!isUserLoading && !isUserDataLoading && userData && pathname !== '/') {
+      const currentRoute = '/' + pathname.split('/')[1]; // Get first segment like /admin, /operations
+      const hasAccess = navItems.find(item => 
+        item.href === currentRoute && item.roles.includes(userData.role)
+      );
+
+      if (!hasAccess && currentRoute !== '/login') {
+        // Redirect to user's default dashboard
+        switch (userData.role) {
+          case 'admin':
+            router.push('/admin');
+            break;
+          case 'operations':
+            router.push('/operations');
+            break;
+          case 'production':
+            router.push('/production');
+            break;
+          case 'sales':
+            router.push('/sales');
+            break;
+          default:
+            router.push('/login');
+        }
+      }
+    }
+  }, [pathname, userData, isUserLoading, isUserDataLoading, router]);
+
+  // Show loading state while checking permissions
+  if (isUserLoading || isUserDataLoading) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center">
+        <div className="text-center">
+          <div className="relative h-12 w-12 mx-auto mb-4">
+            <Image src={newLogoUrl} alt="Luna Industries Logo" fill className="object-contain animate-pulse" />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user, redirect to login
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
