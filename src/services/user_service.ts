@@ -27,13 +27,27 @@ export async function syncUserToFirestore(
     
     if (userSnap.exists()) {
       // User exists, just update lastLogin
-      await updateDoc(userRef, {
+      // Only include fields that are not undefined
+      const updateData: any = {
         lastLogin: serverTimestamp(),
-        // Optionally update email/displayName/photoURL if they changed
-        email: authUser.email || userSnap.data().email,
-        displayName: authUser.displayName || userSnap.data().displayName,
-        photoURL: authUser.photoURL || userSnap.data().photoURL || '',
-      });
+      };
+      
+      // Only update email if it exists
+      if (authUser.email) {
+        updateData.email = authUser.email;
+      }
+      
+      // Only update displayName if it exists and is different
+      if (authUser.displayName) {
+        updateData.displayName = authUser.displayName;
+      }
+      
+      // Only update photoURL if it exists
+      if (authUser.photoURL) {
+        updateData.photoURL = authUser.photoURL;
+      }
+      
+      await updateDoc(userRef, updateData);
       console.log(`User ${authUser.uid} login updated`);
     } else {
       // New user, create the document
