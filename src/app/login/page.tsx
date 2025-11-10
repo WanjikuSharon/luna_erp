@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showNoAccountDialog, setShowNoAccountDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // --- All your existing hooks (unchanged) ---
   const auth = useAuth();
@@ -55,11 +59,14 @@ export default function LoginPage() {
 
   // --- Sign out any existing user when visiting login page ---
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (!isUserLoading && user && !hasCheckedAuth && !isSubmitting) {
       console.log('User already logged in, signing out to show login form');
       auth.signOut();
+      setHasCheckedAuth(true);
+    } else if (!isUserLoading && !user && !hasCheckedAuth) {
+      setHasCheckedAuth(true);
     }
-  }, [isUserLoading, user, auth]);
+  }, [isUserLoading, user, auth, hasCheckedAuth, isSubmitting]);
 
   // --- Redirect after successful login ---
   useEffect(() => {
@@ -88,18 +95,25 @@ export default function LoginPage() {
   // --- Your existing login logic ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     if (!email || !password) {
       toast({ variant: "destructive", title: "Missing fields", description: "Please enter both email and password." });
+      setIsSubmitting(false);
       return;
     }
     if (!email.endsWith('@luna.co.ke')) {
       toast({ variant: "destructive", title: "Invalid Email", description: "Please use your @luna.co.ke email address." });
+      setIsSubmitting(false);
       return;
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Redirect is handled by the useEffect hook above
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to your dashboard...",
+      });
     } catch (error: any) {
       console.error("Login failed:", error);
       toast({
@@ -107,6 +121,7 @@ export default function LoginPage() {
         title: "Login Failed",
         description: "Invalid credentials. Please check your email and password.",
       });
+      setIsSubmitting(false);
     }
   };
 
@@ -167,15 +182,28 @@ export default function LoginPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password" className="text-gray-700">Password</Label>
-                  <Input 
-                      id="password" 
-                      type="password"
-                      placeholder="Enter your password"
-                      required 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="text-gray-900 placeholder:text-gray-400"
-                  />
+                  <div className="relative">
+                    <Input 
+                        id="password" 
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="text-gray-900 placeholder:text-gray-400 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   <Link
                     href="/forgot-password"
                     className="text-sm text-red-600 hover:text-red-700 hover:underline font-medium"
@@ -188,9 +216,9 @@ export default function LoginPage() {
                 <Button 
                   type="submit" 
                   className="w-full bg-[#FF8C42] hover:bg-[#ff7a28] text-white" 
-                  disabled={isUserLoading || isUserDataLoading}
+                  disabled={isSubmitting || isUserLoading || isUserDataLoading}
                 >
-                  {isUserLoading || isUserDataLoading ? 'SIGNING IN...' : 'SIGN IN'}
+                  {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
                 </Button>
               </form>
               
