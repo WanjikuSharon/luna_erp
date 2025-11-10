@@ -53,11 +53,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const firestore = useFirestore();
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
 
-  // Fetch user data from Firestore to get role
+  // ALWAYS call useMemoFirebase - never conditionally
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
   );
+  
+  // ALWAYS call useDoc - never conditionally
   const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userDocRef);
 
   // Filter nav items based on user role
@@ -75,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         item.href === currentRoute && item.roles.includes(userData.role)
       );
 
-      if (!hasAccess && currentRoute !== '/login') {
+      if (!hasAccess && currentRoute !== '/login' && currentRoute !== '/profile' && currentRoute !== '/settings') {
         // Redirect to user's default dashboard
         const role = userData.role;
         
@@ -94,6 +96,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, userData, isUserLoading, isUserDataLoading, router]);
 
+  // Redirect to login if no user (after hooks are called)
+  useEffect(() => {
+    if (!isUserLoading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router, pathname]);
+
   // Show loading state while checking permissions
   if (isUserLoading || isUserDataLoading) {
     return (
@@ -108,10 +117,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If no user, redirect to login
+  // If no user after loading, show loading (redirect happens in useEffect)
   if (!user) {
-    router.push('/login');
-    return null;
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center">
+        <div className="text-center">
+          <div className="relative h-12 w-12 mx-auto mb-4">
+            <Image src={newLogoUrl} alt="Luna Industries Logo" fill className="object-contain animate-pulse" />
+          </div>
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
