@@ -44,6 +44,14 @@ export function UserNav() {
     router.push('/login');
   };
 
+  const handleProfile = () => {
+    router.push('/profile');
+  };
+
+  const handleSettings = () => {
+    router.push('/settings');
+  };
+
   // Show loading state while fetching auth
   if (isAuthLoading) {
     return (
@@ -82,11 +90,11 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={handleProfile}>
             <UserIcon className="mr-2" />
             <span>Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSettings}>
             <Settings className="mr-2" />
             <span>Settings</span>
           </DropdownMenuItem>
