@@ -41,8 +41,8 @@ import { useEffect } from 'react';
 
 const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
-  { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations'] },
-  { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production'] },
+  { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations', 'operations_manager'] },
+  { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production', 'production_personnel'] },
   { href: '/sales', icon: Users, label: 'Sales', roles: ['admin', 'sales'] },
 ];
 
@@ -77,21 +77,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       if (!hasAccess && currentRoute !== '/login') {
         // Redirect to user's default dashboard
-        switch (userData.role) {
-          case 'admin':
-            router.push('/admin');
-            break;
-          case 'operations':
-            router.push('/operations');
-            break;
-          case 'production':
-            router.push('/production');
-            break;
-          case 'sales':
-            router.push('/sales');
-            break;
-          default:
-            router.push('/login');
+        const role = userData.role;
+        
+        if (role === 'admin') {
+          router.push('/admin');
+        } else if (role === 'operations' || role === 'operations_manager') {
+          router.push('/operations');
+        } else if (role === 'production' || role === 'production_personnel') {
+          router.push('/production');
+        } else if (role === 'sales') {
+          router.push('/sales');
+        } else {
+          router.push('/login');
         }
       }
     }
