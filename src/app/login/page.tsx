@@ -25,8 +25,8 @@ import type { User as UserType } from '@/lib/types'; // Import UserType
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import for login
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('mercy.mugati@luna.co.ke');
-  const [password, setPassword] = useState('Operations123#');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showNoAccountDialog, setShowNoAccountDialog] = useState(false);
 
   // --- All your existing hooks (unchanged) ---
@@ -53,58 +53,42 @@ export default function LoginPage() {
     }
   }, [userDataError]);
 
-  // --- Your existing redirect logic with debugging ---
+  // --- Sign out any existing user when visiting login page ---
   useEffect(() => {
-    console.log('Auth State:', {
-      user: user?.uid,
-      email: user?.email,
-      isUserLoading,
-      isUserDataLoading,
-      userData,
-      userDocRef: userDocRef?.path,
-    });
+    if (!isUserLoading && user) {
+      console.log('User already logged in, signing out to show login form');
+      auth.signOut();
+    }
+  }, [isUserLoading, user, auth]);
 
-    if (!isUserLoading && !isUserDataLoading) {
-      if (user && userData) {
-        console.log('User authenticated with data:', userData);
-        switch (userData.role) {
-          case 'admin':
-            router.push('/admin');
-            break;
-          case 'operations_manager':
-            router.push('/operations');
-            break;
-          case 'production_personnel':
-            router.push('/production');
-            break;
-          default:
-            router.push('/login');
-        }
-      } else if (user && !userData) {
-        console.error("User document not found for UID:", user.uid);
-        console.error("Expected path:", `users/${user.uid}`);
-        console.error("Document ref:", userDocRef);
-        console.error("User data loading:", isUserDataLoading);
-        console.error("Firestore error:", userDataError);
-        
-        // TEMPORARY: Redirect to operations anyway for debugging
-        console.warn("TEMPORARY: Redirecting to /operations despite missing user data");
-        router.push('/operations');
-        
-        // Commented out sign out for debugging
-        // toast({
-        //   variant: "destructive",
-        //   title: "Profile Error",
-        //   description: "Your user account is not fully set up. Please contact ICT.",
-        // });
-        // auth.signOut(); 
+  // --- Redirect after successful login ---
+  useEffect(() => {
+    // Only redirect if user just logged in (has both auth user and userData)
+    if (!isUserLoading && !isUserDataLoading && user && userData) {
+      console.log('User authenticated, redirecting to dashboard:', userData);
+      switch (userData.role) {
+        case 'admin':
+          router.push('/admin');
+          break;
+        case 'operations':
+          router.push('/operations');
+          break;
+        case 'production':
+          router.push('/production');
+          break;
+        case 'sales':
+          router.push('/sales');
+          break;
+        default:
+          router.push('/operations');
       }
     }
-  }, [user, isUserLoading, userData, isUserDataLoading, router, auth, toast, userDocRef, userDataError]);
+  }, [user, isUserLoading, userData, isUserDataLoading, router]);
 
-  // --- Your existing login logic (unchanged) ---
+  // --- Your existing login logic ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!email || !password) {
       toast({ variant: "destructive", title: "Missing fields", description: "Please enter both email and password." });
       return;
@@ -114,19 +98,8 @@ export default function LoginPage() {
       return;
     }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      // Temporarily disabled email verification check for development
-      // if (!user.emailVerified) {
-      //   toast({
-      //     variant: "destructive",
-      //     title: "Verification Required",
-      //     description: "Please check your inbox and verify your email address.",
-      //   });
-      //   await auth.signOut();
-      //   return;
-      // }
-      // Redirect is handled by the useEffect hook
+      await signInWithEmailAndPassword(auth, email, password);
+      // Redirect is handled by the useEffect hook above
     } catch (error: any) {
       console.error("Login failed:", error);
       toast({
