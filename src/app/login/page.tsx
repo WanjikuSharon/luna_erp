@@ -73,21 +73,21 @@ export default function LoginPage() {
     // Only redirect if user just logged in (has both auth user and userData)
     if (!isUserLoading && !isUserDataLoading && user && userData) {
       console.log('User authenticated, redirecting to dashboard:', userData);
-      switch (userData.role) {
-        case 'admin':
-          router.push('/admin');
-          break;
-        case 'operations':
-          router.push('/operations');
-          break;
-        case 'production':
-          router.push('/production');
-          break;
-        case 'sales':
-          router.push('/sales');
-          break;
-        default:
-          router.push('/operations');
+      
+      // Map role to dashboard route
+      const role = userData.role;
+      
+      if (role === 'admin') {
+        router.push('/admin');
+      } else if (role === 'operations' || role === 'operations_manager') {
+        router.push('/operations');
+      } else if (role === 'production' || role === 'production_personnel') {
+        router.push('/production');
+      } else if (role === 'sales') {
+        router.push('/sales');
+      } else {
+        // Unknown role, default to operations
+        router.push('/operations');
       }
     }
   }, [user, isUserLoading, userData, isUserDataLoading, router]);
