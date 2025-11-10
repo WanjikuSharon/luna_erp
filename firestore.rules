@@ -68,6 +68,14 @@ service cloud.firestore {
       allow delete: if getUserRole() == 'admin';
     }
     
+    // --- Material Requests Collection (Alternative naming) ---
+    match /material_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'operations']);
+      allow update: if isAuthenticated() && hasAnyRole(['admin', 'operations']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
     // --- Production Batches Collection ---
     match /production_batches/{batchId} {
       allow read: if isAuthenticated();
