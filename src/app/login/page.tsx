@@ -71,26 +71,29 @@ export default function LoginPage() {
   // --- Redirect after successful login ---
   useEffect(() => {
     // Only redirect if user just logged in (has both auth user and userData)
-    if (!isUserLoading && !isUserDataLoading && user && userData) {
+    if (!isUserLoading && !isUserDataLoading && user && userData && isSubmitting) {
       console.log('User authenticated, redirecting to dashboard:', userData);
       
       // Map role to dashboard route
       const role = userData.role;
       
-      if (role === 'admin') {
-        router.push('/admin');
-      } else if (role === 'operations' || role === 'operations_manager') {
-        router.push('/operations');
-      } else if (role === 'production' || role === 'production_personnel') {
-        router.push('/production');
-      } else if (role === 'sales') {
-        router.push('/sales');
-      } else {
-        // Unknown role, default to operations
-        router.push('/operations');
-      }
+      // Small delay to ensure state is settled before redirect
+      setTimeout(() => {
+        if (role === 'admin') {
+          router.push('/admin');
+        } else if (role === 'operations' || role === 'operations_manager') {
+          router.push('/operations');
+        } else if (role === 'production' || role === 'production_personnel') {
+          router.push('/production');
+        } else if (role === 'sales') {
+          router.push('/sales');
+        } else {
+          // Unknown role, default to operations
+          router.push('/operations');
+        }
+      }, 100);
     }
-  }, [user, isUserLoading, userData, isUserDataLoading, router]);
+  }, [user, isUserLoading, userData, isUserDataLoading, router, isSubmitting]);
 
   // --- Your existing login logic ---
   const handleLogin = async (e: React.FormEvent) => {
