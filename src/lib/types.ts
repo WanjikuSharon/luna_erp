@@ -20,8 +20,10 @@ export type LegacyUser = {
 export type User = {
   uid: string; // Firebase Auth UID
   email: string;
-  displayName: string;
-  role: 'admin' | 'sales' | 'operations' | 'production';
+  displayName?: string; // Made optional since it can be undefined
+  name?: string; // Support legacy 'name' field
+  avatarUrl?: string; // Support legacy 'avatarUrl' field
+  role: 'admin' | 'sales' | 'operations' | 'production' | 'operations_manager' | 'production_personnel'; // Include legacy roles
   department?: string;
   photoURL?: string;
   phoneNumber?: string;
