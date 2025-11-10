@@ -154,25 +154,27 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin} className="grid gap-4 mt-6">
                 <div className="grid gap-2">
-                  {/* Changed "Email" to "User ID" to match screenshot */}
-                  <Label htmlFor="email">User ID</Label>
+                  <Label htmlFor="email" className="text-gray-700">User ID</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="21/04820" // Placeholder from screenshot
+                    placeholder="Enter your email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-gray-700">Password</Label>
                   <Input 
                       id="password" 
-                      type="password" 
+                      type="password"
+                      placeholder="Enter your password"
                       required 
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="text-gray-900 placeholder:text-gray-400"
                   />
                   <Link
                     href="/forgot-password"
