@@ -121,6 +121,14 @@ service cloud.firestore {
       allow delete: if getUserRole() == 'admin';
     }
     
+    // --- Daily Sales Records ---
+    match /daily_sales_records/{recordId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'sales']);
+      allow update: if hasAnyRole(['admin', 'sales']);
+      allow delete: if getUserRole() == 'admin';
+    }
+    
     // --- Activity Logs (Read-only for most users) ---
     match /sales_activities/{activityId} {
       allow read: if isAuthenticated();
