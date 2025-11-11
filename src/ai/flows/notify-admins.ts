@@ -3,9 +3,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { initializeFirebase } from '@/firebase/server-init'; // Good: This is our new server fileimport { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { sendEmail } from '@/services/email_service'; // Import the email service
-import type { User, NotificationSettings } from '@/lib/types';
+import { initializeFirebase } from '@/firebase/server-init';
+import { sendEmail } from '@/services/email_service';
+import type { User } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
 
 // Define the input schema for this flow
@@ -28,9 +28,8 @@ const notifyAdminsFlow = ai.defineFlow(
 
     try {
       // 1. Query Firestore for admin users
-      const usersRef = collection(firestore, COLLECTIONS.USERS);
-      const q = query(usersRef, where('role', '==', 'admin'));
-      const querySnapshot = await getDocs(q);
+      const usersRef = firestore.collection(COLLECTIONS.USERS);
+      const querySnapshot = await usersRef.where('role', '==', 'admin').get();
 
       console.log(`Found ${querySnapshot.docs.length} potential admin(s).`);
 
