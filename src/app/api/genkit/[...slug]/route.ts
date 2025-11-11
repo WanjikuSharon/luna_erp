@@ -23,10 +23,13 @@ genkit({
 const handler = startFlowsServer();
 
 // Export the Next.js handlers
-export async function GET(req: NextRequest, { params }: { params: { slug: string[] } }) {
-  return handler(req, { params: { slug: params.slug.join('/') } });
+// In Next.js 15, params is now a Promise
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+  const resolvedParams = await params;
+  return handler(req, { params: { slug: resolvedParams.slug.join('/') } });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string[] } }) {
-  return handler(req, { params: { slug: params.slug.join('/') } });
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+  const resolvedParams = await params;
+  return handler(req, { params: { slug: resolvedParams.slug.join('/') } });
 }
