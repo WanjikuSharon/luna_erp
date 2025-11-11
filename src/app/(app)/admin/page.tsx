@@ -80,15 +80,18 @@ import { DailySalesReportSheet } from '@/components/reports/DailySalesReportShee
 import { CombinedActivityLog } from '@/components/CombinedActivityLog';
 import { ACTIVITY_COLLECTIONS, createActivityQuery } from '@/lib/activity-utils';
 
-// (Role config and other constants are unchanged)
+// Role config with all possible roles
 const roleConfig = {
     admin: { label: 'Admin', variant: 'destructive' as const },
     operations_manager: { label: 'Operations Manager', variant: 'default' as const },
-    production_personnel: { label: 'Production', variant: 'secondary' as const },
+    production_personnel: { label: 'Production Personnel', variant: 'secondary' as const },
+    sales: { label: 'Sales', variant: 'default' as const },
+    operations: { label: 'Operations', variant: 'default' as const },
+    production: { label: 'Production', variant: 'secondary' as const },
 };
 const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
 const editUserSchema = z.object({
-  role: z.enum(['admin', 'operations_manager', 'production_personnel'] as const),
+  role: z.enum(['admin', 'operations_manager', 'production_personnel', 'sales', 'operations', 'production'] as const),
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
@@ -208,10 +211,11 @@ export default function AdminDashboardPage() {
     async function handleDeleteUser() {
       if (!deletingUser) return;
       try {
-        const docRef = doc(firestore, COLLECTIONS.USERS, deletingUser.id);
+        const userName = deletingUser.displayName || deletingUser.name || deletingUser.email;
+        const docRef = doc(firestore, COLLECTIONS.USERS, deletingUser.uid);
         await deleteDoc(docRef);
-        await logAdminActivity(`deleted user: ${deletingUser.name} (${deletingUser.email})`);
-        toast({ title: "User Deleted", description: `${deletingUser.name} has been removed.` });
+        await logAdminActivity(`deleted user: ${userName} (${deletingUser.email})`);
+        toast({ title: "User Deleted", description: `${userName} has been removed.` });
       } catch (error) {
         console.error("Error deleting user:", error);
         toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete user." });
