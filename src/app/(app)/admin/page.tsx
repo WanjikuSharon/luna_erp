@@ -362,7 +362,8 @@ export default function AdminDashboardPage() {
                               </DropdownMenu>
                           </TableCell>
                           </TableRow>
-                      ))}
+                        );
+                      })}
                       </TableBody>
                   </Table>
                 )}
@@ -504,10 +505,11 @@ function EditUserDialog({
   async function onSubmitEditUser(data: EditUserFormValues) {
     if (!user) return;
     try {
-      const docRef = doc(firestore, COLLECTIONS.USERS, user.id);
+      const userName = user.displayName || user.name || user.email;
+      const docRef = doc(firestore, COLLECTIONS.USERS, user.uid);
       await updateDoc(docRef, { role: data.role });
-      await onUserUpdated(`changed role for ${user.name} to ${data.role}`);
-      toast({ title: "User Role Updated", description: `${user.name}'s role has been set to ${data.role}.` });
+      await onUserUpdated(`changed role for ${userName} to ${data.role}`);
+      toast({ title: "User Role Updated", description: `${userName}'s role has been set to ${data.role}.` });
       onOpenChange();
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -521,7 +523,7 @@ function EditUserDialog({
         <DialogHeader>
           <DialogTitle>Edit User Role</DialogTitle>
           <DialogDescription>
-            You are editing the role for <strong className="mx-1">{user?.name}</strong> ({user?.email}).
+            You are editing the role for <strong className="mx-1">{user?.displayName || user?.name || user?.email}</strong> ({user?.email}).
           </DialogDescription>
         </DialogHeader>
         <Form {...editUserForm}>
