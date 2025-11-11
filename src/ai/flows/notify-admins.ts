@@ -27,13 +27,15 @@ const notifyAdminsFlow = ai.defineFlow(
     let notifiedCount = 0;
 
     try {
-      // 1. Query Firestore for admin users
-      const usersRef = firestore.collection(COLLECTIONS.USERS);
-      const querySnapshot = await usersRef.where('role', '==', 'admin').get();
+      // 1. Query Firestore for admin users using client SDK
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const usersRef = collection(firestore, COLLECTIONS.USERS);
+      const q = query(usersRef, where('role', '==', 'admin'));
+      const querySnapshot = await getDocs(q);
 
       console.log(`Found ${querySnapshot.docs.length} potential admin(s).`);
 
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: any) => {
         const adminUser = { id: doc.id, ...doc.data() } as User;
         const settings = adminUser.notificationSettings;
 
