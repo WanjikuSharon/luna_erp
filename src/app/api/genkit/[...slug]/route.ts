@@ -2,8 +2,8 @@
 
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { defineFlow, startFlowsServer } from '@genkit-ai/flow';
-import { NextRequest } from 'next/server';
+import { startFlowsServer } from '@genkit-ai/flow';
+import type { NextRequest } from 'next/server';
 
 // Import all your flows
 import '@/ai/flows/explain-inventory-discrepancy';
@@ -19,17 +19,14 @@ genkit({
   model: 'googleai/gemini-2.5-flash',
 });
 
-// This starts the server
-const handler = startFlowsServer();
-
 // Export the Next.js handlers
 // In Next.js 15, params is now a Promise
-export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
-  const resolvedParams = await params;
-  return handler(req, { params: { slug: resolvedParams.slug.join('/') } });
+export async function GET(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
+  const resolvedParams = await context.params;
+  return startFlowsServer()(req, { params: { slug: resolvedParams.slug.join('/') } });
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
-  const resolvedParams = await params;
-  return handler(req, { params: { slug: resolvedParams.slug.join('/') } });
+export async function POST(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
+  const resolvedParams = await context.params;
+  return startFlowsServer()(req, { params: { slug: resolvedParams.slug.join('/') } });
 }
