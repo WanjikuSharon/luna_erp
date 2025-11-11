@@ -316,16 +316,19 @@ export default function AdminDashboardPage() {
                       </TableRow>
                       </TableHeader>
                       <TableBody>
-                      {(users ?? []).map((user: User) => (
-                          <TableRow key={user.id}>
+                      {(users ?? []).map((user: User) => {
+                        const userName = user.displayName || user.name || 'Unknown User';
+                        const userAvatar = user.photoURL || user.avatarUrl;
+                        return (
+                          <TableRow key={user.uid}>
                           <TableCell>
                               <div className="flex items-center gap-3">
                                   <Avatar className="h-9 w-9">
-                                      <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                      <AvatarImage src={userAvatar} alt={userName} />
+                                      <AvatarFallback>{userName.charAt(0).toUpperCase()}</AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <span className="font-medium">{user.name}</span>
+                                    <span className="font-medium">{userName}</span>
                                     <p className="text-xs text-muted-foreground">{user.email}</p>
                                   </div>
                               </div>
