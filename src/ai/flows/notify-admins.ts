@@ -5,11 +5,11 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { initializeFirebase } from '@/firebase/server-init';
 import { sendEmail } from '@/services/email_service';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import type { User } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
 
-const logger = createModuleLogger('ai-notify-admins');
+const logger = createLogger('ai-notify-admins');
 
 // Define the input schema for this flow
 const NotifyAdminsInputSchema = z.object({
