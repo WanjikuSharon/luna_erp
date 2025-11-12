@@ -6,6 +6,9 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { syncUserToFirestore } from '@/services/user_service';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('FirebaseProvider');
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -87,13 +90,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           try {
             await syncUserToFirestore(firestore, firebaseUser);
           } catch (error) {
-            console.error("Failed to sync user to Firestore:", error);
+            logger.error("Failed to sync user to Firestore:", error);
             // Don't block login on sync failure
           }
         }
       },
       (error) => { // Auth listener error
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
+        logger.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
