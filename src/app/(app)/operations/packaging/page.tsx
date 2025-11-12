@@ -8,6 +8,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -76,6 +77,8 @@ const packagingFormSchema = z.object({
 });
 type PackagingFormValues = z.infer<typeof packagingFormSchema>;
 
+const logger = createLogger('operations-packaging');
+
 export default function PackagingPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -120,7 +123,7 @@ export default function PackagingPage() {
         addForm.reset();
         setIsAddDialogOpen(false);
     } catch (error) {
-         console.error("Error adding material:", error);
+         logger.error("Error adding material:", error);
          toast({ variant: "destructive", title: "Save Failed", description: "Could not add material." });
     }
   }
@@ -133,7 +136,7 @@ export default function PackagingPage() {
       toast({ title: "Material Updated", description: `${data.name} has been updated.` });
       setEditingMaterial(null);
     } catch (error) {
-      console.error("Error updating material:", error);
+      logger.error("Error updating material:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update material." });
     }
   }
@@ -145,7 +148,7 @@ export default function PackagingPage() {
       await deleteDoc(docRef);
       toast({ title: "Material Deleted", description: `${deletingMaterial.name} has been deleted.` });
     } catch (error) {
-      console.error("Error deleting material:", error);
+      logger.error("Error deleting material:", error);
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete material." });
     } finally {
       setDeletingMaterial(null);

@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -128,7 +128,7 @@ const findProductStock = (products: Product[], name: string) => {
     return product ? product.quantity : 0;
 };
 
-const logger = createModuleLogger('operations-reconciliation');
+const logger = createLogger('operations-reconciliation');
 
 export default function ReconciliationPage() {
   const { toast } = useToast();

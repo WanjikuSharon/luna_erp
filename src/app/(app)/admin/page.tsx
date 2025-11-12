@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -96,7 +96,7 @@ const editUserSchema = z.object({
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
-const logger = createModuleLogger('admin-dashboard');
+const logger = createLogger('admin-dashboard');
 
 export default function AdminDashboardPage() {
     const { toast } = useToast();
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
             timestamp: serverTimestamp(),
             });
         } catch (error) {
-            console.error("Failed to log admin activity:", error);
+            logger.error("Failed to log admin activity:", error);
         }
     };
 
@@ -219,7 +219,7 @@ export default function AdminDashboardPage() {
         await logAdminActivity(`deleted user: ${userName} (${deletingUser.email})`);
         toast({ title: "User Deleted", description: `${userName} has been removed.` });
       } catch (error) {
-        console.error("Error deleting user:", error);
+        logger.error("Error deleting user:", error);
         toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete user." });
       } finally {
         setDeletingUser(null);
@@ -514,7 +514,7 @@ function EditUserDialog({
       toast({ title: "User Role Updated", description: `${userName}'s role has been set to ${data.role}.` });
       onOpenChange();
     } catch (error) {
-      console.error("Error updating user role:", error);
+      logger.error("Error updating user role:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update user role." });
     }
   }

@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -177,7 +177,7 @@ async function fetchHistoricalUsageData(
   }
 }
 
-const logger = createModuleLogger('production-log');
+const logger = createLogger('production-log');
 
 export default function LogProductionPage() {
   const { toast } = useToast();

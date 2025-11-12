@@ -3,10 +3,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import { notifyAdmins } from './notify-admins'; // Import the other flow
 
-const logger = createModuleLogger('ai-send-request-email');
+const logger = createLogger('ai-send-request-email');
 
 // Define input based on MaterialRequestWithVendor data needed for the email
 const SendRequestEmailInputSchema = z.object({

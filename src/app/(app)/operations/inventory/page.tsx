@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -94,7 +94,7 @@ const rawMaterialFormSchema = z.object({
 });
 type RawMaterialFormValues = z.infer<typeof rawMaterialFormSchema>;
 
-const logger = createModuleLogger('operations-inventory');
+const logger = createLogger('operations-inventory');
 
 export default function VendorsAndMaterialsPage() {
   const { toast } = useToast();

@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -66,7 +66,7 @@ const stockInSchema = z.object({
 });
 type StockInFormValues = z.infer<typeof stockInSchema>;
 
-const logger = createModuleLogger('sales-stock-in');
+const logger = createLogger('sales-stock-in');
 
 export default function StockInPage() {
   const { toast } = useToast();

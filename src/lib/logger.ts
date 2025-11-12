@@ -117,7 +117,7 @@ class Logger {
    * Create a scoped logger for a specific module
    * This helps identify which part of the app generated the log
    */
-  createModuleLogger(moduleName: string) {
+  createLogger(moduleName: string) {
     return {
       debug: (message: string, ...args: any[]) => 
         this.debug(`[${moduleName}] ${message}`, ...args),
@@ -135,4 +135,4 @@ class Logger {
 export const logger = new Logger();
 
 // Export convenience function for creating module loggers
-export const createLogger = (moduleName: string) => logger.createModuleLogger(moduleName);
+export const createLogger = (moduleName: string) => logger.createLogger(moduleName);

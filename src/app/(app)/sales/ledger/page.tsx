@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -65,7 +65,7 @@ const ledgerEntrySchema = z.object({
 });
 type LedgerFormValues = z.infer<typeof ledgerEntrySchema>;
 
-const logger = createModuleLogger('sales-ledger');
+const logger = createLogger('sales-ledger');
 
 export default function SalesLedgerPage() {
   const { toast } = useToast();

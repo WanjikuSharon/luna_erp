@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -64,7 +64,7 @@ const salespersonFormSchema = z.object({
 });
 type SalespersonFormValues = z.infer<typeof salespersonFormSchema>;
 
-const logger = createModuleLogger('sales-dashboard');
+const logger = createLogger('sales-dashboard');
 
 export default function SalesDashboardPage() {
   const { toast } = useToast();
