@@ -4,9 +4,9 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { v2 as cloudinary } from 'cloudinary'; // Import the SDK
-import { createModuleLogger } from '@/lib/logger';
+import { createLogger } from '@/lib/logger';
 
-const logger = createModuleLogger('ai-generate-upload-signature');
+const logger = createLogger('ai-generate-upload-signature');
 
 // Get Cloudinary credentials from .env.local
 // Ensure these are in your .env.local file!
