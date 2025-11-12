@@ -5,8 +5,11 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { initializeFirebase } from '@/firebase/server-init';
 import { sendEmail } from '@/services/email_service';
+import { createModuleLogger } from '@/lib/logger';
 import type { User } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
+
+const logger = createModuleLogger('ai-notify-admins');
 
 // Define the input schema for this flow
 const NotifyAdminsInputSchema = z.object({
@@ -21,7 +24,7 @@ const notifyAdminsFlow = ai.defineFlow(
     outputSchema: z.object({ success: z.boolean(), notifiedCount: z.number() }),
   },
   async input => {
-    console.log('notifyAdmins flow started with input:', input);
+    logger.debug('notifyAdmins flow started with input:', input);
     const { firestore } = initializeFirebase(); // Get Firestore instance
     const recipients: { email_address: { address: string; name?: string } }[] = [];
     let notifiedCount = 0;
@@ -33,13 +36,13 @@ const notifyAdminsFlow = ai.defineFlow(
       const q = query(usersRef, where('role', '==', 'admin'));
       const querySnapshot = await getDocs(q);
 
-      console.log(`Found ${querySnapshot.docs.length} potential admin(s).`);
+      logger.info(`Found ${querySnapshot.docs.length} potential admin(s).`);
 
       querySnapshot.forEach((doc: any) => {
         const adminUser = { id: doc.id, ...doc.data() } as User;
         const settings = adminUser.notificationSettings;
 
-        console.log(`Checking admin: ${adminUser.email}`, settings);
+        logger.debug(`Checking admin: ${adminUser.email}`, settings);
 
         // 2. Filter based on preferences
         if (settings?.receiveEmails !== false) { // Notify if true or undefined/missing
@@ -49,15 +52,15 @@ const notifyAdminsFlow = ai.defineFlow(
               name: adminUser.name,
             },
           });
-          console.log(`Adding ${adminUser.email} to recipients.`);
+          logger.debug(`Adding ${adminUser.email} to recipients.`);
         } else {
-          console.log(`Skipping ${adminUser.email} due to notification preferences.`);
+          logger.debug(`Skipping ${adminUser.email} due to notification preferences.`);
         }
       });
 
       // 3. Call the email service if there are recipients
       if (recipients.length > 0) {
-        console.log(`Attempting to send email to ${recipients.length} admin(s).`);
+        logger.info(`Attempting to send email to ${recipients.length} admin(s).`);
         const emailSent = await sendEmail({
           to: recipients,
           subject: input.subject,
@@ -67,18 +70,18 @@ const notifyAdminsFlow = ai.defineFlow(
 
         if (emailSent) {
           notifiedCount = recipients.length;
-          console.log(`Email successfully sent to ${notifiedCount} admin(s).`);
+          logger.info(`Email successfully sent to ${notifiedCount} admin(s).`);
           return { success: true, notifiedCount };
         } else {
-          console.error('Email service failed to send.');
+          logger.error('Email service failed to send.');
           return { success: false, notifiedCount: 0 };
         }
       } else {
-        console.log('No admins found or eligible for email notification.');
+        logger.info('No admins found or eligible for email notification.');
         return { success: true, notifiedCount: 0 }; // Success, but no one notified
       }
     } catch (error) {
-      console.error('Error in notifyAdmins flow:', error);
+      logger.error('Error in notifyAdmins flow:', error);
       return { success: false, notifiedCount: 0 };
     }
   }
