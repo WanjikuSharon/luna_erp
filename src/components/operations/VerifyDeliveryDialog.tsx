@@ -128,7 +128,7 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
       // UPDATED: Log this action
       try {
         if (!authUser) {
-          console.warn("Cannot log activity: User not authenticated");
+          logger.warn("Cannot log activity: User not authenticated");
         } else {
           const userName = authUser.displayName || authUser.email || 'Operations User';
           const userAvatar = authUser.photoURL || '';
@@ -140,13 +140,13 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
           });
         }
       } catch (logError) {
-        console.error("Failed to log activity:", logError);
+        logger.error("Failed to log activity:", logError);
       }
 
       handleClose();
 
     } catch (error: any) {
-      console.error('Upload process failed:', error);
+      logger.error('Upload process failed:', error);
       setErrorMessage(`Upload Failed: ${error.message || 'Please try again.'}`);
     } finally {
       setIsUploading(false);
