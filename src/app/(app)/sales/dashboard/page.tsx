@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
