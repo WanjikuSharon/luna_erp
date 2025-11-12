@@ -56,14 +56,14 @@ export default function LoginPage() {
   // Log any errors from Firestore
   useEffect(() => {
     if (userDataError) {
-      console.error('Firestore error when fetching user data:', userDataError);
+      logger.error('Firestore error when fetching user data:', userDataError);
     }
   }, [userDataError]);
 
   // --- Sign out any existing user when visiting login page ---
   useEffect(() => {
     if (!isUserLoading && user && !hasCheckedAuth && !isSubmitting) {
-      console.log('User already logged in, signing out to show login form');
+      logger.debug('User already logged in, signing out to show login form');
       auth.signOut();
       setHasCheckedAuth(true);
     } else if (!isUserLoading && !user && !hasCheckedAuth) {
@@ -75,7 +75,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Only redirect if user just logged in (has both auth user and userData)
     if (!isUserLoading && !isUserDataLoading && user && userData && isSubmitting) {
-      console.log('User authenticated, redirecting to dashboard:', userData);
+      logger.info('User authenticated, redirecting to dashboard:', userData);
       
       // Map role to dashboard route
       const role = userData.role;
