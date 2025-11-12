@@ -3,7 +3,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { createModuleLogger } from '@/lib/logger';
 import { notifyAdmins } from './notify-admins'; // Import the other flow
+
+const logger = createModuleLogger('ai-send-request-email');
 
 // Define input based on MaterialRequestWithVendor data needed for the email
 const SendRequestEmailInputSchema = z.object({
@@ -22,7 +25,7 @@ const sendRequestEmailFlow = ai.defineFlow(
     outputSchema: z.object({ success: z.boolean() }),
   },
   async requestDetails => {
-    console.log('sendRequestEmail flow triggered for request:', requestDetails.requestId);
+    logger.debug('sendRequestEmail flow triggered for request:', requestDetails.requestId);
 
     // Format the email content
     const subject = `New Material Request Submitted: ${requestDetails.materialName}`;
@@ -42,10 +45,10 @@ const sendRequestEmailFlow = ai.defineFlow(
     try {
       // Call the notifyAdmins flow
       const result = await notifyAdmins({ subject, body });
-      console.log('notifyAdmins result:', result);
+      logger.info('notifyAdmins result:', result);
       return { success: result.success };
     } catch (error) {
-      console.error('Error calling notifyAdmins flow:', error);
+      logger.error('Error calling notifyAdmins flow:', error);
       return { success: false };
     }
   }
