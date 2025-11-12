@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -95,6 +96,7 @@ const editUserSchema = z.object({
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
+const logger = createModuleLogger('admin-dashboard');
 
 export default function AdminDashboardPage() {
     const { toast } = useToast();
