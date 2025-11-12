@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -93,6 +94,7 @@ const rawMaterialFormSchema = z.object({
 });
 type RawMaterialFormValues = z.infer<typeof rawMaterialFormSchema>;
 
+const logger = createModuleLogger('operations-inventory');
 
 export default function VendorsAndMaterialsPage() {
   const { toast } = useToast();
@@ -141,7 +143,7 @@ export default function VendorsAndMaterialsPage() {
   const logOperationActivity = async (action: string) => {
     // Require authentication for logging activities
     if (!authUser) {
-      console.warn("Cannot log activity: User not authenticated");
+      logger.warn("Cannot log activity: User not authenticated");
       return;
     }
 
@@ -155,7 +157,7 @@ export default function VendorsAndMaterialsPage() {
         timestamp: serverTimestamp(),
       });
     } catch (error) {
-      console.error("Failed to log activity:", error);
+      logger.error("Failed to log activity:", error);
       // Don't block the main action, just log the error
     }
   };
@@ -206,10 +208,10 @@ export default function VendorsAndMaterialsPage() {
           vendorName: vendor.name,
           requestUrl: `${window.location.origin}/operations/requests?requestId=${newRequestId}`,
       }).catch(flowError => {
-          console.error("Error invoking sendRequestEmail flow:", flowError);
+          logger.error("Error invoking sendRequestEmail flow:", flowError);
       });
     } catch (error) {
-      console.error("Error submitting request:", error);
+      logger.error("Error submitting request:", error);
       toast({ variant: "destructive", title: "Submission Failed", description: "Could not save request." });
     }
   }
@@ -230,7 +232,7 @@ export default function VendorsAndMaterialsPage() {
       vendorForm.reset();
       setIsAddVendorDialogOpen(false);
     } catch (error) {
-      console.error("Error adding vendor:", error);
+      logger.error("Error adding vendor:", error);
       toast({ variant: "destructive", title: "Save Failed", description: "Could not add vendor. Please try again." });
     }
   }
@@ -252,7 +254,7 @@ export default function VendorsAndMaterialsPage() {
         materialForm.reset();
         setIsAddMaterialDialogOpen(false);
     } catch (error) {
-         console.error("Error adding material:", error);
+         logger.error("Error adding material:", error);
          toast({ variant: "destructive", title: "Save Failed", description: "Could not add material. Please try again." });
     }
   }
@@ -276,7 +278,7 @@ export default function VendorsAndMaterialsPage() {
 
       toast({ title: "Vendor Deleted", description: `${deletingVendor.name} has been deleted.` });
     } catch (error) {
-      console.error("Error deleting vendor:", error);
+      logger.error("Error deleting vendor:", error);
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete vendor." });
     } finally {
       setDeletingVendor(null);
@@ -296,7 +298,7 @@ export default function VendorsAndMaterialsPage() {
       
       toast({ title: "Material Deleted", description: `${deletingMaterial.name} has been deleted.` });
     } catch (error) {
-      console.error("Error deleting material:", error);
+      logger.error("Error deleting material:", error);
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete material." });
     } finally {
       setDeletingMaterial(null); // Close the dialog
@@ -707,7 +709,7 @@ function EditVendorDialog({
       toast({ title: "Vendor Updated", description: `${data.name} has been updated.` });
       onOpenChange(); 
     } catch (error) {
-      console.error("Error updating vendor:", error);
+      logger.error("Error updating vendor:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update vendor." });
     }
   }
@@ -853,7 +855,7 @@ function EditMaterialDialog({
       toast({ title: "Material Updated", description: `${data.name} has been updated.` });
       onOpenChange(); // Close the dialog
     } catch (error) {
-      console.error("Error updating material:", error);
+      logger.error("Error updating material:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update material." });
     }
   }
