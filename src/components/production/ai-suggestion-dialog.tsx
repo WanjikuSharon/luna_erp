@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles } from 'lucide-react';
 import { suggestInventoryUpdate, SuggestInventoryUpdateInput, SuggestInventoryUpdateOutput } from '@/ai/flows/suggest-inventory-update';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AiSuggestionDialog');
 
 interface AiSuggestionDialogProps {
   open: boolean;
@@ -39,7 +42,7 @@ export function AiSuggestionDialog({
           setSuggestion(result);
         } catch (e) {
           setError('Failed to get AI suggestion. Please try again.');
-          console.error(e);
+          logger.error('AI suggestion failed:', e);
         } finally {
           setIsLoading(false);
         }
