@@ -1,6 +1,10 @@
 // src/services/email_service.ts
 'use server'; // Mark this module for server-side execution if needed by flows
 
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('EmailService');
+
 // Define the structure of the email data
 interface SendEmailParams {
   to: { email_address: { address: string; name?: string } }[];
@@ -21,7 +25,7 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
   const apiKey = process.env.ZEPTOMAIL_API_KEY;
 
   if (!apiKey) {
-    console.error('ZeptoMail API Key is not configured in environment variables.');
+    logger.error('ZeptoMail API Key is not configured in environment variables.');
     return false;
   }
 
@@ -44,18 +48,18 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`Failed to send email via ZeptoMail. Status: ${response.status}`, errorBody);
+      logger.error(`Failed to send email via ZeptoMail. Status: ${response.status}`, errorBody);
       return false;
     }
 
     const result = await response.json();
-    console.log('ZeptoMail API Response:', result);
+    logger.info('ZeptoMail API Response:', result);
     // You might want to check the specific structure of ZeptoMail's success response
     // For now, we assume a 2xx status means success
     return true;
 
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', error);
     return false;
   }
 }
