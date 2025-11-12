@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -64,6 +65,8 @@ const ledgerEntrySchema = z.object({
 });
 type LedgerFormValues = z.infer<typeof ledgerEntrySchema>;
 
+const logger = createModuleLogger('sales-ledger');
+
 export default function SalesLedgerPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -118,7 +121,7 @@ export default function SalesLedgerPage() {
       form.reset({ date: new Date(), agentId: '', productsSold: 0, amountSold: 0 });
 
     } catch (error) {
-      console.error("Error saving ledger entry:", error);
+      logger.error("Error saving ledger entry:", error);
       toast({ variant: "destructive", title: "Save Failed", description: "Could not save the record." });
     }
   }
