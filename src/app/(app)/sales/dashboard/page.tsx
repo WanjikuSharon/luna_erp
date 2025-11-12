@@ -64,6 +64,8 @@ const salespersonFormSchema = z.object({
 });
 type SalespersonFormValues = z.infer<typeof salespersonFormSchema>;
 
+const logger = createModuleLogger('sales-dashboard');
+
 export default function SalesDashboardPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -143,7 +145,7 @@ export default function SalesDashboardPage() {
   const logSalesActivity = async (action: string) => {
     // Require authentication for logging activities
     if (!authUser) {
-      console.warn("Cannot log activity: User not authenticated");
+      logger.warn("Cannot log activity: User not authenticated");
       return;
     }
 
@@ -157,7 +159,7 @@ export default function SalesDashboardPage() {
         timestamp: serverTimestamp(),
       });
     } catch (error) {
-      console.error("Failed to log sales activity:", error);
+      logger.error("Failed to log sales activity:", error);
     }
   };
 
@@ -170,7 +172,7 @@ export default function SalesDashboardPage() {
         addForm.reset();
         setIsAddDialogOpen(false);
     } catch (error) {
-         console.error("Error adding agent:", error);
+         logger.error("Error adding agent:", error);
          toast({ variant: "destructive", title: "Save Failed", description: "Could not add agent." });
     }
   }
@@ -184,7 +186,7 @@ export default function SalesDashboardPage() {
       toast({ title: "Agent Updated", description: `${data.name} has been updated.` });
       setEditingAgent(null);
     } catch (error) {
-      console.error("Error updating agent:", error);
+      logger.error("Error updating agent:", error);
       toast({ variant: "destructive", title: "Update Failed", description: "Could not update agent." });
     }
   }
@@ -197,7 +199,7 @@ export default function SalesDashboardPage() {
       await logSalesActivity(`deleted agent: ${deletingAgent.name}`);
       toast({ title: "Agent Deleted", description: `${deletingAgent.name} has been deleted.` });
     } catch (error) {
-      console.error("Error deleting agent:", error);
+      logger.error("Error deleting agent:", error);
       toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete agent." });
     } finally {
       setDeletingAgent(null);
