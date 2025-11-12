@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -65,6 +66,8 @@ const stockInSchema = z.object({
 });
 type StockInFormValues = z.infer<typeof stockInSchema>;
 
+const logger = createModuleLogger('sales-stock-in');
+
 export default function StockInPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -113,7 +116,7 @@ export default function StockInPage() {
     try {
       // --- This is the Firebase Transaction ---
       await runTransaction(firestore, async (transaction) => {
-        console.log("Starting Stock In transaction...");
+        logger.debug("Starting Stock In transaction...");
         
         const itemsWithNames: { productId: string, productName: string, quantity: number }[] = [];
 
@@ -132,7 +135,7 @@ export default function StockInPage() {
           transaction.update(prodRef, { quantity: increment(item.quantity) });
           itemsWithNames.push({ ...item, productName });
         }
-        console.log("All products checked and credited.");
+        logger.debug("All products checked and credited.");
 
         // 2. Create the Van Stock Log
         const logRef = doc(collection(firestore, 'van_stock_logs'));
@@ -146,7 +149,7 @@ export default function StockInPage() {
           items: itemsWithNames, // Save the array of items
           createdAt: serverTimestamp(),
         });
-        console.log("Stock In log created.");
+        logger.info("Stock In log created.");
       });
 
       // --- Transaction Successful ---
@@ -162,7 +165,7 @@ export default function StockInPage() {
 
     } catch (e: any) {
       // --- Transaction Failed ---
-      console.error("Stock In Transaction failed: ", e);
+      logger.error("Stock In Transaction failed: ", e);
       toast({
         variant: "destructive",
         title: "Transaction Failed",
