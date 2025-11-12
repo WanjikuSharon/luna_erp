@@ -388,7 +388,7 @@ export default function LogProductionPage() {
 
     } catch (e: any) {
       // --- Transaction Failed ---
-      console.error("Transaction failed: ", e);
+      logger.error("Transaction failed: ", e);
       toast({
         variant: "destructive",
         title: "Transaction Failed",
