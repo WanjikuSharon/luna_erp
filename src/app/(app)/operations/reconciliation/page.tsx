@@ -5,6 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -126,6 +127,8 @@ const findProductStock = (products: Product[], name: string) => {
     const product = products.find(p => p.name.includes(name.split(' - ')[1]));
     return product ? product.quantity : 0;
 };
+
+const logger = createModuleLogger('operations-reconciliation');
 
 export default function ReconciliationPage() {
   const { toast } = useToast();
@@ -249,7 +252,7 @@ export default function ReconciliationPage() {
 
 
     } catch (error) {
-      console.error("Error saving report:", error);
+      logger.error("Error saving report:", error);
       toast({ variant: "destructive", title: "Save Failed", description: "Could not save the report." });
     }
   }
