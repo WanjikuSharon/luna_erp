@@ -24,6 +24,9 @@ import { doc } from 'firebase/firestore'; // Import doc
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase'; // Import Firestore hooks
 import type { User as UserType } from '@/lib/types'; // Import UserType
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import for login
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('LoginPage');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
