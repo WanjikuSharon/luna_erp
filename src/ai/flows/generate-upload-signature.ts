@@ -4,6 +4,9 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { v2 as cloudinary } from 'cloudinary'; // Import the SDK
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ai-generate-upload-signature');
 
 // Get Cloudinary credentials from .env.local
 // Ensure these are in your .env.local file!
@@ -12,7 +15,7 @@ const API_KEY = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
 const API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
-  console.error("Cloudinary credentials are not set in .env.local");
+  logger.error("Cloudinary credentials are not set in .env.local");
   // In a real app, you might throw an error, but we'll let it fail at runtime
   // if the flow is called without keys.
 }
