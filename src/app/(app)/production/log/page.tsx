@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -171,11 +172,12 @@ async function fetchHistoricalUsageData(
     // Return a formatted string
     return usageRecords.join(', ');
   } catch (error) {
-    console.error('Error fetching historical usage data:', error);
+    logger.error('Error fetching historical usage data:', error);
     return 'Unable to retrieve historical data at this time.';
   }
 }
 
+const logger = createModuleLogger('production-log');
 
 export default function LogProductionPage() {
   const { toast } = useToast();
@@ -325,7 +327,7 @@ export default function LogProductionPage() {
       });
 
       // --- 2. Transaction Successful: Check for Discrepancies ---
-      console.log('Transaction successful. Checking for discrepancies...');
+      logger.debug('Transaction successful. Checking for discrepancies...');
       let discrepancyFound = false;
 
       // Fetch the recipe for the product
@@ -334,7 +336,7 @@ export default function LogProductionPage() {
 
       if (!recipeSnap.exists()) {
         // No recipe found, so we can't check. Just show success.
-        console.warn(`No recipe found for product ${data.productId}. Skipping discrepancy check.`);
+        logger.warn(`No recipe found for product ${data.productId}. Skipping discrepancy check.`);
       } else {
         const recipe = recipeSnap.data() as Omit<ProductRecipe, 'id'>;
         
@@ -351,7 +353,7 @@ export default function LogProductionPage() {
 
           // Check for a significant discrepancy (e.g., more than 1% difference)
           if (Math.abs(reportedQuantityUsed - expectedQuantityUsed) / expectedQuantityUsed > 0.01) {
-            console.log(`Discrepancy found for ${usedMaterial.materialId}!`);
+            logger.info(`Discrepancy found for ${usedMaterial.materialId}!`);
             const materialName = rawMaterials?.find(rm => rm.id === usedMaterial.materialId)?.name || 'Unknown Material';
             
             // Fetch real historical usage data from Firestore
