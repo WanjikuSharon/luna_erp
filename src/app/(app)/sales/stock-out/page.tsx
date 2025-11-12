@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { createModuleLogger } from '@/lib/logger';
 import {
   Card,
   CardContent,
@@ -64,6 +65,8 @@ const stockOutSchema = z.object({
 });
 type StockOutFormValues = z.infer<typeof stockOutSchema>;
 
+const logger = createModuleLogger('sales-stock-out');
+
 export default function StockOutPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -118,7 +121,7 @@ export default function StockOutPage() {
     try {
       // --- This is the Firebase Transaction ---
       await runTransaction(firestore, async (transaction) => {
-        console.log("Starting Stock Out transaction...");
+        logger.debug("Starting Stock Out transaction...");
         
         const itemsWithNames: { productId: string, productName: string, quantity: number }[] = [];
 
@@ -142,7 +145,7 @@ export default function StockOutPage() {
           transaction.update(prodRef, { quantity: increment(-item.quantity) });
           itemsWithNames.push({ ...item, productName });
         }
-        console.log("All products checked and debited.");
+        logger.debug("All products checked and debited.");
 
         // 2. Create the Van Stock Log
         const logRef = doc(collection(firestore, 'van_stock_logs'));
@@ -156,7 +159,7 @@ export default function StockOutPage() {
           items: itemsWithNames, // Save the array of items
           createdAt: serverTimestamp(),
         });
-        console.log("Stock Out log created.");
+        logger.info("Stock Out log created.");
       });
 
       // --- Transaction Successful ---
@@ -172,7 +175,7 @@ export default function StockOutPage() {
 
     } catch (e: any) {
       // --- Transaction Failed ---
-      console.error("Stock Out Transaction failed: ", e);
+      logger.error("Stock Out Transaction failed: ", e);
       toast({
         variant: "destructive",
         title: "Transaction Failed",
