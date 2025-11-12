@@ -121,7 +121,7 @@ export default function LoginPage() {
         description: "Redirecting to your dashboard...",
       });
     } catch (error: any) {
-      console.error("Login failed:", error);
+      logger.error("Login failed:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",
