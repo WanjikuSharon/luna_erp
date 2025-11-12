@@ -25,6 +25,9 @@ import { Loader2, UploadCloud } from 'lucide-react';
 
 // Import your Genkit flow
 import { generateUploadSignature } from '@/ai/flows/generate-upload-signature';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('VerifyDeliveryDialog');
 
 interface VerifyDeliveryDialogProps {
   request: MaterialRequest | null;
