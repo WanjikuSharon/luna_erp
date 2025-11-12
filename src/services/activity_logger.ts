@@ -1,6 +1,9 @@
 // src/services/activity_logger.ts
 import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('ActivityLogger');
 
 export interface ActivityLogParams {
   action: string;
@@ -35,9 +38,9 @@ export async function logActivity(
       timestamp: serverTimestamp(),
     });
     
-    console.log(`Activity logged: ${params.action} in ${params.module}`);
+    logger.debug(`Activity logged: ${params.action} in ${params.module}`);
   } catch (error) {
-    console.error('Failed to log activity:', error);
+    logger.error('Failed to log activity:', error);
     // Don't throw - logging failures shouldn't break the main flow
   }
 }
@@ -54,7 +57,7 @@ export async function logActivityWithUser(
   metadata?: Record<string, any>
 ): Promise<void> {
   if (!authUser) {
-    console.warn('Cannot log activity: No authenticated user');
+    logger.warn('Cannot log activity: No authenticated user');
     return;
   }
 
