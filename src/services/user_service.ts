@@ -9,6 +9,9 @@ import {
 } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { User } from '@/lib/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('UserService');
 
 export const USERS_COLLECTION = 'users';
 
@@ -48,7 +51,7 @@ export async function syncUserToFirestore(
       }
       
       await updateDoc(userRef, updateData);
-      console.log(`User ${authUser.uid} login updated`);
+      logger.debug(`User ${authUser.uid} login updated`);
     } else {
       // New user, create the document
       const newUser: Omit<User, 'uid'> = {
@@ -68,10 +71,10 @@ export async function syncUserToFirestore(
       };
       
       await setDoc(userRef, newUser);
-      console.log(`New user ${authUser.uid} created in Firestore`);
+      logger.info(`New user ${authUser.uid} created in Firestore`);
     }
   } catch (error) {
-    console.error('Error syncing user to Firestore:', error);
+    logger.error('Error syncing user to Firestore:', error);
     throw error;
   }
 }
@@ -94,7 +97,7 @@ export async function getUserRole(
     
     return null;
   } catch (error) {
-    console.error('Error fetching user role:', error);
+    logger.error('Error fetching user role:', error);
     return null;
   }
 }
@@ -117,7 +120,7 @@ export async function getUserData(
     
     return null;
   } catch (error) {
-    console.error('Error fetching user data:', error);
+    logger.error('Error fetching user data:', error);
     return null;
   }
 }
@@ -133,9 +136,9 @@ export async function updateUserRole(
   try {
     const userRef = doc(firestore, USERS_COLLECTION, uid);
     await updateDoc(userRef, { role: newRole });
-    console.log(`User ${uid} role updated to ${newRole}`);
+    logger.info(`User ${uid} role updated to ${newRole}`);
   } catch (error) {
-    console.error('Error updating user role:', error);
+    logger.error('Error updating user role:', error);
     throw error;
   }
 }
@@ -150,9 +153,9 @@ export async function deactivateUser(
   try {
     const userRef = doc(firestore, USERS_COLLECTION, uid);
     await updateDoc(userRef, { isActive: false });
-    console.log(`User ${uid} deactivated`);
+    logger.info(`User ${uid} deactivated`);
   } catch (error) {
-    console.error('Error deactivating user:', error);
+    logger.error('Error deactivating user:', error);
     throw error;
   }
 }
@@ -169,7 +172,7 @@ export async function getUserDisplayName(
     const userData = await getUserData(firestore, uid);
     return userData?.displayName || userData?.email || 'Unknown User';
   } catch (error) {
-    console.error('Error fetching user display name:', error);
+    logger.error('Error fetching user display name:', error);
     return 'Unknown User';
   }
 }
