@@ -5,6 +5,9 @@ import { useState, useEffect } from 'react';
 import { useFirestore, useUser } from '@/firebase';
 import { getUserRole, getUserData } from '@/services/user_service';
 import type { User } from '@/lib/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('useUserRole');
 
 export interface UserRoleResult {
   role: User['role'] | null;
@@ -58,7 +61,7 @@ export function useUserRole(): UserRoleResult {
       } catch (err) {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to fetch user data'));
-          console.error('Error in useUserRole:', err);
+          logger.error('Error in useUserRole:', err);
         }
       } finally {
         if (isMounted) {
