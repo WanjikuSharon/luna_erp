@@ -80,12 +80,12 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
 
     try {
       // 1. Get the secure signature from our Genkit flow
-      console.log('Requesting upload signature...');
+      logger.debug('Requesting upload signature...');
       const sigResponse = await generateUploadSignature({});
       if (!sigResponse) throw new Error('Failed to get upload signature.');
 
       // 2. Create FormData and upload to Cloudinary
-      console.log('Uploading file to Cloudinary...');
+      logger.debug('Uploading file to Cloudinary...');
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('api_key', sigResponse.api_key);
@@ -107,10 +107,10 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
 
       const uploadResult = await uploadResponse.json();
       const secureUrl = uploadResult.secure_url;
-      console.log('File uploaded:', secureUrl);
+      logger.info('File uploaded:', secureUrl);
 
       // 3. Update the Firestore document
-      console.log('Updating Firestore document...');
+      logger.debug('Updating Firestore document...');
       const requestDocRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
       
       await updateDoc(requestDocRef, {
