@@ -44,7 +44,6 @@ const FIREBASE_ERROR_MESSAGES: Record<string, string> = {
   'storage/unauthenticated': 'You must be logged in to upload files.',
   'storage/retry-limit-exceeded': 'Upload failed after multiple retries.',
   'storage/invalid-checksum': 'File upload failed due to checksum mismatch.',
-  'storage/canceled': 'Upload was canceled.',
   'storage/invalid-event-name': 'Invalid upload event.',
   'storage/invalid-url': 'Invalid file URL.',
   'storage/invalid-argument': 'Invalid upload parameters.',
