@@ -1,7 +1,7 @@
 // src/components/CombinedActivityLog.tsx
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ type ActivityWithSource = Activity & { source: string; sourceVariant?: 'default'
  * <CombinedActivityLog queries={queries} maxItems={20} showSourceBadges={true} />
  * ```
  */
-export function CombinedActivityLog({
+export const CombinedActivityLog = memo(function CombinedActivityLog({
   queries,
   maxItems,
   emptyMessage = 'No activities to display.',
@@ -151,4 +151,4 @@ export function CombinedActivityLog({
       ))}
     </div>
   );
-}
+});
