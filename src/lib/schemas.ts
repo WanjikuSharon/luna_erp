@@ -165,6 +165,7 @@ export const vendorSchema = z.object({
 export const materialRequestSchema = z.object({
   materialId: z.string().min(1, 'Please select a material'),
   quantity: positiveNumberSchema,
+  unit: unitSchema,
   vendorId: z.string().min(1, 'Please select a vendor'),
 });
 
