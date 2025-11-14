@@ -264,9 +264,9 @@ export const batchRawMaterialSchema = z.object({
  * QC analysis item schema
  */
 export const qcAnalysisItemSchema = z.object({
-  analysis: z.string().min(1, 'Analysis is required'),
-  standard: z.string().min(1, 'Standard is required'),
-  obtained: z.string().min(1, 'Obtained value is required'),
+  analysis: z.string(),
+  standard: z.string().optional(),
+  obtained: z.string().optional(),
 });
 
 /**
@@ -281,17 +281,16 @@ export const batchPackagingMaterialSchema = z.object({
  * QC end label details schema
  */
 export const qcEndLabelDetailsSchema = z.object({
-  dateOfMfg: z.date(),
-  expDate: z.date(),
-  batchNo: z.string().min(1, 'Batch number is required'),
-  stocked: z.boolean(),
-  batchSheet: z.string().min(1, 'Batch sheet reference is required'),
-  yield: z.string().min(1, 'Yield is required'),
-  expectedYield: z.string().min(1, 'Expected yield is required'),
-  percentYield: z.string().min(1, 'Percent yield is required'),
-  analysedBy: z.string().min(1, 'Analyst name is required'),
-  dateAnalysed: z.date(),
-  releaseForFilling: z.boolean(),
+  dateOfMfg: z.date({ required_error: 'QC Mfg Date is required'}),
+  expDate: z.date({ required_error: 'QC Exp Date is required'}),
+  stocked: z.boolean().default(false),
+  batchSheet: z.string().optional(),
+  yield: z.string().optional(),
+  expectedYield: z.string().optional(),
+  percentYield: z.string().optional(),
+  analysedBy: z.string().min(1, 'Analysed By is required'),
+  dateAnalysed: z.date({ required_error: 'Analysis Date is required'}),
+  releaseForFilling: z.boolean().default(false),
 });
 
 /**
