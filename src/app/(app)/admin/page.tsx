@@ -7,6 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  updateUserRoleSchema,
+  type UpdateUserRoleFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -91,10 +95,6 @@ const roleConfig = {
     production: { label: 'Production', variant: 'secondary' as const },
 };
 const userRoles = Object.keys(roleConfig) as (keyof typeof roleConfig)[];
-const editUserSchema = z.object({
-  role: z.enum(['admin', 'operations_manager', 'production_personnel', 'sales', 'operations', 'production'] as const),
-});
-type EditUserFormValues = z.infer<typeof editUserSchema>;
 
 const logger = createLogger('admin-dashboard');
 
@@ -494,8 +494,8 @@ function EditUserDialog({
 }) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const editUserForm = useForm<EditUserFormValues>({
-    resolver: zodResolver(editUserSchema),
+  const editUserForm = useForm<UpdateUserRoleFormValues>({
+    resolver: zodResolver(updateUserRoleSchema),
   });
 
   useEffect(() => {
@@ -504,7 +504,7 @@ function EditUserDialog({
     }
   }, [user, editUserForm]);
 
-  async function onSubmitEditUser(data: EditUserFormValues) {
+  async function onSubmitEditUser(data: UpdateUserRoleFormValues) {
     if (!user) return;
     try {
       const userName = user.displayName || user.name || user.email;
