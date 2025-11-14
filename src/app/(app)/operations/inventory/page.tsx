@@ -7,6 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  materialRequestSchema,
+  vendorSchema,
+  rawMaterialSchema,
+  type MaterialRequestFormValues,
+  type VendorFormValues,
+  type RawMaterialFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -68,32 +76,6 @@ import type { RawMaterial, Vendor } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
 
-// --- Schemas ---
-const requestFormSchema = z.object({
-  materialId: z.string().min(1, 'Please select a material.'),
-  quantity: z.coerce.number().min(0.1, 'Quantity must be positive.'),
-  unit: z.string().min(1, 'Please select units.'),
-  vendorId: z.string().min(1, 'Please select a vendor.'),
-});
-type RequestFormValues = z.infer<typeof requestFormSchema>;
-
-const vendorFormSchema = z.object({
-  name: z.string().min(2, 'Vendor name is required.'),
-  email: z.string().email('Please enter a valid email.'),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-});
-type VendorFormValues = z.infer<typeof vendorFormSchema>;
-
-const rawMaterialFormSchema = z.object({
-    sku: z.string().min(3, 'SKU is required (e.g., LUN-WD-ACA-01)'),
-    name: z.string().min(2, 'Material name is required.'),
-    quantity: z.coerce.number().min(0, 'Initial quantity must be 0 or more.'),
-    unit: z.enum(['kg', 'liters', 'units']), 
-    reorderPoint: z.coerce.number().min(0, 'Reorder point must be 0 or more.'),
-});
-type RawMaterialFormValues = z.infer<typeof rawMaterialFormSchema>;
-
 const logger = createLogger('operations-inventory');
 
 export default function VendorsAndMaterialsPage() {
@@ -128,13 +110,16 @@ export default function VendorsAndMaterialsPage() {
   }, [vendors, vendorSearchTerm]);
 
   // --- Forms ---
-  const requestForm = useForm<RequestFormValues>({ 
+  const requestForm = useForm<MaterialRequestFormValues>({ 
+    resolver: zodResolver(materialRequestSchema),
     defaultValues: { materialId: '', vendorId: '', quantity: 0, unit: 'kg' }
   });
   const vendorForm = useForm<VendorFormValues>({ 
+    resolver: zodResolver(vendorSchema),
     defaultValues: { name: '', email: '', phone: '', address: '' }
   });
   const materialForm = useForm<RawMaterialFormValues>({ 
+    resolver: zodResolver(rawMaterialSchema),
     defaultValues: { sku: '', name: '', quantity: 0, unit: 'kg', reorderPoint: 0 }
   });
 
@@ -163,7 +148,7 @@ export default function VendorsAndMaterialsPage() {
   };
 
   // --- UPDATED: onSubmit Functions (now with logging) ---
-  async function onSubmitRequest(data: RequestFormValues) {
+  async function onSubmitRequest(data: MaterialRequestFormValues) {
     // Require authentication
     if (!authUser) {
       toast({ variant: "destructive", title: "Authentication Required", description: "You must be logged in to submit a request." });
@@ -687,7 +672,7 @@ function EditVendorDialog({
   const { toast } = useToast();
   const firestore = useFirestore();
   const editVendorForm = useForm<VendorFormValues>({
-    resolver: zodResolver(vendorFormSchema),
+    resolver: zodResolver(vendorSchema),
     defaultValues: { name: '', email: '', phone: '', address: '' }
   });
 
@@ -825,7 +810,7 @@ function EditMaterialDialog({
 
   // Form for editing the material
   const editMaterialForm = useForm<RawMaterialFormValues>({
-    resolver: zodResolver(rawMaterialFormSchema),
+    resolver: zodResolver(rawMaterialSchema),
     defaultValues: { sku: '', name: '', quantity: 0, unit: 'kg', reorderPoint: 0 }
   });
 
