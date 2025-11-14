@@ -7,6 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  productionBatchSchema,
+  type ProductionBatchFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -77,48 +81,6 @@ const qcAnalysisTemplate = [
   "6. Viscosity", "7. Centrifuge stability", "8. Relative density", "9. A value",
   "10. Assay", "11. Other"
 ].map(item => ({ analysis: item, standard: '', obtained: '' }));
-
-
-// Zod Schema (Unchanged)
-const batchFormSchema = z.object({
-  productId: z.string().min(1, 'Please select a product.'),
-  dateOfMfg: z.date({ required_error: 'Date of manufacture is required.' }),
-  batchNumber: z.string().min(1, 'Batch number is required.'),
-  batchSize: z.coerce.number().min(1, 'Batch size must be at least 1.'),
-  mfRef: z.string().optional(),
-  rawMaterialsUsed: z.array(z.object({
-    materialId: z.string().min(1, 'Select a material'),
-    quantity: z.coerce.number().min(0.01, 'Qty > 0'),
-    weighed: z.boolean().default(false),
-  })).min(1, 'Add at least one raw material.'),
-  qcRawSealsOk: z.boolean().default(false),
-  qcRawWeightOk: z.boolean().default(false),
-  qcRawMaterialOk: z.boolean().default(false),
-  qcEndLabelDetails: z.object({
-      dateOfMfg: z.date({ required_error: 'QC Mfg Date is required.'}),
-      expDate: z.date({ required_error: 'QC Exp Date is required.'}),
-      stocked: z.boolean().default(false),
-      batchSheet: z.string().optional(),
-      yield: z.string().optional(),
-      expectedYield: z.string().optional(),
-      percentYield: z.string().optional(),
-      analysedBy: z.string().min(1, 'Analysed By is required.'),
-      dateAnalysed: z.date({ required_error: 'Analysis Date is required.'}),
-      releaseForFilling: z.boolean().default(false),
-  }),
-  qcEndAnalysisItems: z.array(z.object({
-      analysis: z.string(),
-      standard: z.string().optional(),
-      obtained: z.string().optional(),
-  })).default(qcAnalysisTemplate),
-  qcEndProblems: z.string().optional(),
-  qcEndImprovement: z.string().optional(),
-  packagingUsed: z.array(z.object({
-    packagingId: z.string().min(1, 'Select packaging'),
-    quantity: z.coerce.number().min(1, 'Qty > 0'),
-  })).min(1, 'Add at least one packaging material.'),
-});
-type BatchFormValues = z.infer<typeof batchFormSchema>;
 
 /**
  * Helper function to fetch historical usage data for a specific product and material
@@ -200,8 +162,8 @@ export default function LogProductionPage() {
   const isLoading = isLoadingMaterials || isLoadingProducts || isLoadingPackaging || isUserLoading;
 
   // --- Form Setup (Unchanged) ---
-  const form = useForm<BatchFormValues>({
-    resolver: zodResolver(batchFormSchema),
+  const form = useForm<ProductionBatchFormValues>({
+    resolver: zodResolver(productionBatchSchema),
     defaultValues: {
       productId: '',
       batchNumber: '',
@@ -241,7 +203,7 @@ export default function LogProductionPage() {
   });
 
   // --- UPDATED: onSubmit Function ---
-  async function onSubmit(data: BatchFormValues) {
+  async function onSubmit(data: ProductionBatchFormValues) {
     // Require authentication
     if (!user) {
       toast({ variant: "destructive", title: "Authentication Required", description: "You must be logged in to log a production batch." });
