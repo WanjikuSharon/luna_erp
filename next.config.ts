@@ -54,4 +54,11 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Bundle analyzer configuration (enabled with ANALYZE=true npm run build)
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+export default withBundleAnalyzer(nextConfig);
+
 export default nextConfig;
