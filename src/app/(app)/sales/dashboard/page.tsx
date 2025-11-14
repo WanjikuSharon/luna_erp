@@ -7,6 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  salespersonSchema,
+  type SalespersonFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -55,14 +59,6 @@ import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebas
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, Timestamp, serverTimestamp } from 'firebase/firestore'; 
 import type { Salesperson, DailySalesLedgerEntry } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
-
-// --- Form Schema for "Add/Edit Salesperson" ---
-const salespersonFormSchema = z.object({
-  name: z.string().min(2, 'Salesperson name is required.'),
-  phone: z.string().min(10, 'A valid phone number is required.'),
-  // We can add email/address later if needed
-});
-type SalespersonFormValues = z.infer<typeof salespersonFormSchema>;
 
 const logger = createLogger('sales-dashboard');
 
@@ -126,12 +122,12 @@ export default function SalesDashboardPage() {
 
   // --- Forms ---
   const addForm = useForm<SalespersonFormValues>({
-    resolver: zodResolver(salespersonFormSchema),
+    resolver: zodResolver(salespersonSchema),
     defaultValues: { name: '', phone: '' },
   });
   
   const editForm = useForm<SalespersonFormValues>({
-    resolver: zodResolver(salespersonFormSchema),
+    resolver: zodResolver(salespersonSchema),
   });
 
   // Pre-fill edit form
