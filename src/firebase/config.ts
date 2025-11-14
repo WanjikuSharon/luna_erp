@@ -1,10 +1,19 @@
 // src/firebase/config.ts
+import { env } from '@/lib/env';
 
+/**
+ * Firebase Configuration
+ * 
+ * Uses validated environment variables to configure Firebase.
+ * If any required variables are missing, the app will fail to start
+ * with a clear error message.
+ */
 export const firebaseConfig = {
-  projectId: "studio-8179379207-d2380",
-  appId: "1:92501070043:web:8d57ae9e3bee20c168bcfe",
-  apiKey: "AIzaSyDcmOudMleKIIFPLljU4Sr31W6DerISabg",
-  authDomain: "studio-8179379207-d2380.firebaseapp.com",
-  measurementId: "",
-  messagingSenderId: "92501070043"
+  apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
 };
