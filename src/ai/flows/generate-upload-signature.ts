@@ -5,26 +5,15 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { v2 as cloudinary } from 'cloudinary'; // Import the SDK
 import { createLogger } from '@/lib/logger';
+import { env } from '@/lib/env';
 
 const logger = createLogger('ai-generate-upload-signature');
 
-// Get Cloudinary credentials from .env.local
-// Ensure these are in your .env.local file!
-const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const API_KEY = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-const API_SECRET = process.env.CLOUDINARY_API_SECRET;
-
-if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
-  logger.error("Cloudinary credentials are not set in .env.local");
-  // In a real app, you might throw an error, but we'll let it fail at runtime
-  // if the flow is called without keys.
-}
-
-// Configure the Cloudinary SDK
+// Configure the Cloudinary SDK with validated environment variables
 cloudinary.config({
-  cloud_name: CLOUD_NAME,
-  api_key: API_KEY,
-  api_secret: API_SECRET,
+  cloud_name: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
+  api_secret: env.CLOUDINARY_API_SECRET,
   secure: true,
 });
 
@@ -50,14 +39,15 @@ export const generateUploadSignature = ai.defineFlow(
         // You can add other parameters here if you want to be stricter
         // e.g., folder: 'delivery_notes'
       },
-      API_SECRET! // Use the secret key
+      env.CLOUDINARY_API_SECRET // Use the secret key
     );
 
     return {
       signature,
       timestamp,
-      api_key: API_KEY!,
-      cloud_name: CLOUD_NAME!,
+      api_key: env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
+      cloud_name: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     };
   }
 );
+
