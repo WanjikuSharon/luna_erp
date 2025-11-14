@@ -1,7 +1,7 @@
 // src/components/ActivityLog.tsx
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -47,7 +47,7 @@ interface ActivityLogProps {
  * <ActivityLog query={myQuery} maxItems={10} />
  * ```
  */
-export function ActivityLog({
+export const ActivityLog = memo(function ActivityLog({
   query: activityQuery,
   maxItems,
   emptyMessage = 'No activities to display.',
@@ -111,4 +111,4 @@ export function ActivityLog({
       ))}
     </div>
   );
-}
+});
