@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -79,11 +80,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-// NEW: Import the report sheet
-import { DailySalesReportSheet } from '@/components/reports/DailySalesReportSheet';
-// NEW: Import the combined activity log
-import { CombinedActivityLog } from '@/components/CombinedActivityLog';
 import { ACTIVITY_COLLECTIONS, createActivityQuery } from '@/lib/activity-utils';
+import { TableSkeleton, CardSkeleton } from '@/components/skeletons';
+
+// Dynamic imports for heavy components
+const DailySalesReportSheet = dynamic(
+  () => import('@/components/reports/DailySalesReportSheet').then(mod => ({ default: mod.DailySalesReportSheet })),
+  { loading: () => <CardSkeleton /> }
+);
+
+const CombinedActivityLog = dynamic(
+  () => import('@/components/CombinedActivityLog').then(mod => ({ default: mod.CombinedActivityLog })),
+  { loading: () => <TableSkeleton rows={10} /> }
+);
 
 // Role config with all possible roles
 const roleConfig = {
