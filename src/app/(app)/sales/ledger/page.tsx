@@ -7,6 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  salesLedgerEntrySchema,
+  type SalesLedgerEntryFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -56,15 +60,6 @@ import {
 } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Zod Schema for a single entry in the ledger
-const ledgerEntrySchema = z.object({
-  date: z.date({ required_error: 'Please select a date.' }),
-  agentId: z.string().min(1, 'Please select a salesperson.'),
-  productsSold: z.coerce.number().min(0, 'Must be 0 or more.'),
-  amountSold: z.coerce.number().min(0.01, 'Amount must be positive.'),
-});
-type LedgerFormValues = z.infer<typeof ledgerEntrySchema>;
-
 const logger = createLogger('sales-ledger');
 
 export default function SalesLedgerPage() {
@@ -83,8 +78,8 @@ export default function SalesLedgerPage() {
   const { data: ledgerEntries, isLoading: isLoadingLedger } = useCollection<DailySalesLedgerEntry>(ledgerRef);
 
   // --- Form Setup ---
-  const form = useForm<LedgerFormValues>({
-    resolver: zodResolver(ledgerEntrySchema),
+  const form = useForm<SalesLedgerEntryFormValues>({
+    resolver: zodResolver(salesLedgerEntrySchema),
     defaultValues: {
       date: new Date(),
       agentId: '',
@@ -94,7 +89,7 @@ export default function SalesLedgerPage() {
   });
 
   // --- Form Submit Handler ---
-  async function onSubmit(data: LedgerFormValues) {
+  async function onSubmit(data: SalesLedgerEntryFormValues) {
     const selectedSalesperson = salespeople?.find(s => s.id === data.agentId);
     if (!selectedSalesperson) {
       toast({ variant: "destructive", title: "Error", description: "Invalid salesperson selected."});
