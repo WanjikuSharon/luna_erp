@@ -10,6 +10,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  packagingMaterialSchema,
+  type PackagingMaterialFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -67,16 +71,6 @@ import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestor
 import type { PackagingMaterial } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
 
-// --- Form Schema for "Add/Edit Packaging Material" ---
-const packagingFormSchema = z.object({
-    sku: z.string().min(3, 'SKU is required (e.g., LUN-BOT-500)'),
-    name: z.string().min(2, 'Material name is required.'),
-    quantity: z.coerce.number().min(0, 'Initial quantity must be 0 or more.'),
-    unit: z.enum(['units', 'rolls']), // Enforce specific units
-    reorderPoint: z.coerce.number().min(0, 'Reorder point must be 0 or more.'),
-});
-type PackagingFormValues = z.infer<typeof packagingFormSchema>;
-
 const logger = createLogger('operations-packaging');
 
 export default function PackagingPage() {
@@ -92,13 +86,13 @@ export default function PackagingPage() {
   const { data: packagingMaterials, isLoading } = useCollection<PackagingMaterial>(packagingRef);
 
   // --- Forms ---
-  const addForm = useForm<PackagingFormValues>({
-    resolver: zodResolver(packagingFormSchema),
+  const addForm = useForm<PackagingMaterialFormValues>({
+    resolver: zodResolver(packagingMaterialSchema),
     defaultValues: { sku: '', name: '', quantity: 0, reorderPoint: 0, unit: 'units' },
   });
   
-  const editForm = useForm<PackagingFormValues>({
-    resolver: zodResolver(packagingFormSchema),
+  const editForm = useForm<PackagingMaterialFormValues>({
+    resolver: zodResolver(packagingMaterialSchema),
   });
 
   // Pre-fill edit form
@@ -116,7 +110,7 @@ export default function PackagingPage() {
   }
 
   // --- Form Submit Handlers ---
-  async function onSubmitAdd(data: PackagingFormValues) {
+  async function onSubmitAdd(data: PackagingMaterialFormValues) {
     try {
         await addDoc(collection(firestore, COLLECTIONS.PACKAGING), data);
         toast({ title: "Material Added", description: `${data.name} has been added.` });
@@ -128,7 +122,7 @@ export default function PackagingPage() {
     }
   }
 
-  async function onSubmitEdit(data: PackagingFormValues) {
+  async function onSubmitEdit(data: PackagingMaterialFormValues) {
     if (!editingMaterial) return;
     try {
       const docRef = doc(firestore, COLLECTIONS.PACKAGING, editingMaterial.id);
@@ -270,8 +264,8 @@ function PackagingForm({
   onClose,
   submitText = "Save Material"
 } : {
-  form: ReturnType<typeof useForm<PackagingFormValues>>,
-  onSubmit: (data: PackagingFormValues) => void,
+  form: ReturnType<typeof useForm<PackagingMaterialFormValues>>,
+  onSubmit: (data: PackagingMaterialFormValues) => void,
   onClose: () => void,
   submitText?: string,
 }) {
