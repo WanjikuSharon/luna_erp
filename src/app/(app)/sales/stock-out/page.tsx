@@ -7,6 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createLogger } from '@/lib/logger';
 import {
+  stockOutSchema,
+  type StockOutFormValues,
+} from '@/lib/schemas';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -53,17 +57,6 @@ import {
   increment,
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/services/inventory_service';
-
-// Zod Schema for the Stock Out form
-const stockOutSchema = z.object({
-  date: z.date({ required_error: 'Please select a date.' }),
-  agentId: z.string().min(1, 'Please select a salesperson.'),
-  items: z.array(z.object({
-    productId: z.string().min(1, 'Select a product'),
-    quantity: z.coerce.number().min(1, 'Qty must be at least 1'),
-  })).min(1, 'Add at least one product.'),
-});
-type StockOutFormValues = z.infer<typeof stockOutSchema>;
 
 const logger = createLogger('sales-stock-out');
 
