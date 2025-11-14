@@ -1,4 +1,3 @@
-
 'use client' 
 
 import Link from 'next/link';
@@ -6,6 +5,10 @@ import Image from 'next/image';
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button';
 import { ServerCrash } from 'lucide-react';
+import { handleError } from '@/lib/error-handler';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('app-error');
  
 export default function Error({
   error,
@@ -15,8 +18,9 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error(error)
+    // Use centralized error handler
+    const appError = handleError(error, 'app-error');
+    logger.error('Application error:', appError);
   }, [error])
 
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
