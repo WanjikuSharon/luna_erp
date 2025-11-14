@@ -75,6 +75,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import type { RawMaterial, Vendor } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import { handleError, getErrorMessage } from '@/lib/error-handler';
 
 const logger = createLogger('operations-inventory');
 
@@ -196,8 +197,12 @@ export default function VendorsAndMaterialsPage() {
           logger.error("Error invoking sendRequestEmail flow:", flowError);
       });
     } catch (error) {
-      logger.error("Error submitting request:", error);
-      toast({ variant: "destructive", title: "Submission Failed", description: "Could not save request." });
+      const appError = handleError(error, 'onSubmitRequest');
+      toast({ 
+        variant: "destructive", 
+        title: "Submission Failed", 
+        description: appError.message 
+      });
     }
   }
 
@@ -217,8 +222,12 @@ export default function VendorsAndMaterialsPage() {
       vendorForm.reset();
       setIsAddVendorDialogOpen(false);
     } catch (error) {
-      logger.error("Error adding vendor:", error);
-      toast({ variant: "destructive", title: "Save Failed", description: "Could not add vendor. Please try again." });
+      const appError = handleError(error, 'onSubmitAddVendor');
+      toast({ 
+        variant: "destructive", 
+        title: "Save Failed", 
+        description: appError.message 
+      });
     }
   }
 
@@ -239,8 +248,12 @@ export default function VendorsAndMaterialsPage() {
         materialForm.reset();
         setIsAddMaterialDialogOpen(false);
     } catch (error) {
-         logger.error("Error adding material:", error);
-         toast({ variant: "destructive", title: "Save Failed", description: "Could not add material. Please try again." });
+         const appError = handleError(error, 'onSubmitAddMaterial');
+         toast({ 
+           variant: "destructive", 
+           title: "Save Failed", 
+           description: appError.message 
+         });
     }
   }
   
@@ -263,8 +276,12 @@ export default function VendorsAndMaterialsPage() {
 
       toast({ title: "Vendor Deleted", description: `${deletingVendor.name} has been deleted.` });
     } catch (error) {
-      logger.error("Error deleting vendor:", error);
-      toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete vendor." });
+      const appError = handleError(error, 'handleDeleteVendor');
+      toast({ 
+        variant: "destructive", 
+        title: "Delete Failed", 
+        description: appError.message 
+      });
     } finally {
       setDeletingVendor(null);
     }
@@ -283,8 +300,12 @@ export default function VendorsAndMaterialsPage() {
       
       toast({ title: "Material Deleted", description: `${deletingMaterial.name} has been deleted.` });
     } catch (error) {
-      logger.error("Error deleting material:", error);
-      toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete material." });
+      const appError = handleError(error, 'handleDeleteMaterial');
+      toast({ 
+        variant: "destructive", 
+        title: "Delete Failed", 
+        description: appError.message 
+      });
     } finally {
       setDeletingMaterial(null); // Close the dialog
     }
@@ -694,8 +715,12 @@ function EditVendorDialog({
       toast({ title: "Vendor Updated", description: `${data.name} has been updated.` });
       onOpenChange(); 
     } catch (error) {
-      logger.error("Error updating vendor:", error);
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not update vendor." });
+      const appError = handleError(error, 'onSubmitEditVendor');
+      toast({ 
+        variant: "destructive", 
+        title: "Update Failed", 
+        description: appError.message 
+      });
     }
   }
 
@@ -840,8 +865,12 @@ function EditMaterialDialog({
       toast({ title: "Material Updated", description: `${data.name} has been updated.` });
       onOpenChange(); // Close the dialog
     } catch (error) {
-      logger.error("Error updating material:", error);
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not update material." });
+      const appError = handleError(error, 'onSubmitEditMaterial');
+      toast({ 
+        variant: "destructive", 
+        title: "Update Failed", 
+        description: appError.message 
+      });
     }
   }
 
