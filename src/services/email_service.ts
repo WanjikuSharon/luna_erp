@@ -2,6 +2,7 @@
 'use server'; // Mark this module for server-side execution if needed by flows
 
 import { createLogger } from '@/lib/logger';
+import { env } from '@/lib/env';
 
 const logger = createLogger('EmailService');
 
@@ -22,12 +23,8 @@ const ZEPTOMAIL_API_URL = 'https://api.zeptomail.com/v1.1/email';
  * @returns {Promise<boolean>} - True if the email was sent successfully (based on API response), false otherwise.
  */
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {
-  const apiKey = process.env.ZEPTOMAIL_API_KEY;
-
-  if (!apiKey) {
-    logger.error('ZeptoMail API Key is not configured in environment variables.');
-    return false;
-  }
+  // Use validated environment variable
+  const apiKey = env.ZEPTOMAIL_API_KEY;
 
   // Ensure the bounce address is set
   const payload = {
