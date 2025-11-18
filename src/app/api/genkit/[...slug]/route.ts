@@ -1,24 +1,46 @@
 // src/app/api/genkit/[...slug]/route.ts
-import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase-admin';
-
-// Import flows at module level so they register with Genkit on startup
-import '@/ai/flows/explain-inventory-discrepancy';
-import '@/ai/flows/suggest-inventory-update';
-import '@/ai/flows/notify-admins';
-import '@/ai/flows/send-request-email';
-import '@/ai/flows/generate-upload-signature';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Initialize Genkit globally
-const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
-});
+// Lazy load Genkit and flows only at runtime (not during build)
+let genkitInitialized = false;
+let initError: Error | null = null;
+
+async function ensureGenkitInitialized() {
+  if (genkitInitialized) return true;
+  if (initError) return false;
+
+  try {
+    // Dynamically import Genkit to avoid build-time issues
+    const { genkit } = await import('genkit');
+    const { googleAI } = await import('@genkit-ai/google-genai');
+
+    // Import flows
+    await Promise.all([
+      import('@/ai/flows/explain-inventory-discrepancy'),
+      import('@/ai/flows/suggest-inventory-update'),
+      import('@/ai/flows/notify-admins'),
+      import('@/ai/flows/send-request-email'),
+      import('@/ai/flows/generate-upload-signature'),
+    ]);
+
+    // Initialize Genkit
+    genkit({
+      plugins: [googleAI()],
+      model: 'googleai/gemini-2.5-flash',
+    });
+
+    genkitInitialized = true;
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize Genkit:', error);
+    initError = error as Error;
+    return false;
+  }
+}
 
 // Handle POST requests to run flows
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
@@ -26,6 +48,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (!admin) {
     return NextResponse.json(
       { error: 'Firebase Admin not configured' },
+      { status: 503 }
+    );
+  }
+
+  // Ensure Genkit is initialized
+  const initialized = await ensureGenkitInitialized();
+  if (!initialized) {
+    return NextResponse.json(
+      { error: 'Genkit initialization failed', details: initError?.message },
       { status: 503 }
     );
   }
