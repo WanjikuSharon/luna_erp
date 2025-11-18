@@ -44,8 +44,35 @@ export type Env = z.infer<typeof envSchema>;
  * 
  * This will throw an error if any required variables are missing
  * or if they don't match the expected format.
+ * 
+ * During build/compile phase, validation is skipped to prevent build failures.
  */
 function validateEnv(): Env {
+  // Skip validation during build phase (when NEXT_PHASE is set)
+  // or when running in CI environments without full env setup
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || 
+                       process.env.NEXT_PHASE === 'phase-development-build' ||
+                       process.env.CI === 'true';
+  
+  if (isBuildPhase) {
+    console.warn('⚠️ Skipping environment validation during build phase');
+    // Return a mock object with empty strings for build-time
+    return {
+      NODE_ENV: (process.env.NODE_ENV as any) || 'development',
+      NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+      NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+      NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '',
+      NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '',
+      CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+      ZEPTOMAIL_API_KEY: process.env.ZEPTOMAIL_API_KEY || '',
+    };
+  }
+
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
