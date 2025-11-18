@@ -1,7 +1,7 @@
 // src/lib/firebase-admin.ts
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-
+// - IGNORE -
 /**
  * Safe Firebase Admin SDK initialization
  * Prevents build crashes when credentials are missing
