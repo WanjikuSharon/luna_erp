@@ -2,6 +2,7 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { NextRequest, NextResponse } from 'next/server';
+import { admin } from '@/lib/firebase-admin';
 
 // Import flows at module level so they register with Genkit on startup
 import '@/ai/flows/explain-inventory-discrepancy';
@@ -21,6 +22,14 @@ const ai = genkit({
 
 // Handle POST requests to run flows
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+  // If admin failed to load (e.g. during build), stop here
+  if (!admin) {
+    return NextResponse.json(
+      { error: 'Firebase Admin not configured' },
+      { status: 503 }
+    );
+  }
+
   const resolvedParams = await params;
   const flowName = resolvedParams.slug[0]; // e.g., "explainInventoryDiscrepancy"
 
