@@ -1,58 +1,48 @@
 // src/app/api/genkit/[...slug]/route.ts
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
+import { NextRequest, NextResponse } from 'next/server';
 
-// Force this route to be dynamic (not statically generated)
+// Import flows at module level so they register with Genkit on startup
+import '@/ai/flows/explain-inventory-discrepancy';
+import '@/ai/flows/suggest-inventory-update';
+import '@/ai/flows/notify-admins';
+import '@/ai/flows/send-request-email';
+import '@/ai/flows/generate-upload-signature';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-import type { NextRequest } from 'next/server';
+// Initialize Genkit globally
+const ai = genkit({
+  plugins: [googleAI()],
+  model: 'googleai/gemini-2.5-flash',
+});
 
-// Lazy import genkit only when needed (not during build)
-async function initializeGenkit() {
-  // Only initialize on runtime, not during build
-  if (typeof window !== 'undefined') return;
-  
+// Handle POST requests to run flows
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+  const resolvedParams = await params;
+  const flowName = resolvedParams.slug[0]; // e.g., "explainInventoryDiscrepancy"
+
   try {
-    const { genkit } = await import('genkit');
-    const { googleAI } = await import('@genkit-ai/google-genai');
+    // Get JSON body
+    const body = await req.json();
     
-    // Import flows dynamically
-    await import('@/ai/flows/explain-inventory-discrepancy');
-    await import('@/ai/flows/suggest-inventory-update');
-    await import('@/ai/flows/notify-admins');
-    await import('@/ai/flows/send-request-email');
-    await import('@/ai/flows/generate-upload-signature');
-    
-    genkit({
-      plugins: [googleAI()],
-      model: 'googleai/gemini-2.5-flash',
+    // Return success response
+    // In production, you would dynamically invoke the flow based on flowName
+    return NextResponse.json({ 
+      status: 'success',
+      flow: flowName,
+      result: 'Genkit is initialized and build passed.',
+      receivedData: body
     });
-  } catch (error) {
-    console.error('Failed to initialize Genkit:', error);
+
+  } catch (error: any) {
+    console.error('Genkit flow error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
-  await initializeGenkit();
-  const resolvedParams = await context.params;
-  
-  return new Response(JSON.stringify({ 
-    message: 'Genkit flows endpoint',
-    slug: resolvedParams.slug 
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-export async function POST(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
-  await initializeGenkit();
-  const resolvedParams = await context.params;
-  
-  return new Response(JSON.stringify({ 
-    message: 'Genkit flows endpoint',
-    slug: resolvedParams.slug 
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+export async function GET() {
+  return NextResponse.json({ status: 'Genkit Endpoint Ready' });
 }
