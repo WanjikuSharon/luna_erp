@@ -1,28 +1,11 @@
 // src/lib/security/api-auth.ts
 import { cookies } from 'next/headers';
-import { auth } from 'firebase-admin';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { admin, getAdminAuth } from '@/lib/firebase-admin';
 
 /**
  * API Route Authentication Utilities
  * Provides utilities for authenticating API requests using Firebase Auth
  */
-
-// Initialize Firebase Admin (if not already initialized)
-if (!getApps().length) {
-  try {
-    // Initialize with service account for server-side
-    const serviceAccount = JSON.parse(
-      process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '{}'
-    );
-    
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
-  }
-}
 
 /**
  * Extract Firebase ID token from request headers
@@ -47,8 +30,15 @@ export async function verifyAuthToken(request: Request) {
     return null;
   }
   
+  // Check if Firebase Admin is initialized
+  const auth = getAdminAuth();
+  if (!auth) {
+    console.error('Firebase Admin not initialized');
+    return null;
+  }
+  
   try {
-    const decodedToken = await auth().verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
     return decodedToken;
   } catch (error) {
     console.error('Token verification failed:', error);
