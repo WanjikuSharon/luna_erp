@@ -48,14 +48,21 @@ export type Env = z.infer<typeof envSchema>;
  * During build/compile phase, validation is skipped to prevent build failures.
  */
 function validateEnv(): Env {
+  // Skip validation in browser (client-side) - only validate on server
+  const isBrowser = typeof window !== 'undefined';
+  
   // Skip validation during build phase (when NEXT_PHASE is set)
   // or when running in CI environments without full env setup
   const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || 
                        process.env.NEXT_PHASE === 'phase-development-build' ||
                        process.env.CI === 'true';
   
-  if (isBuildPhase) {
-    console.warn('⚠️ Skipping environment validation during build phase');
+  if (isBrowser || isBuildPhase) {
+    if (isBrowser) {
+      console.warn('⚠️ Skipping environment validation in browser (use process.env directly for NEXT_PUBLIC_ vars)');
+    } else {
+      console.warn('⚠️ Skipping environment validation during build phase');
+    }
     // Return a mock object with empty strings for build-time
     return {
       NODE_ENV: (process.env.NODE_ENV as any) || 'development',
