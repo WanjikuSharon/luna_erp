@@ -76,6 +76,60 @@
   }
 }
 
+/* Accessibility: Focus Visible Styles */
+/* Only show focus ring for keyboard users */
+body:not(.keyboard-user) *:focus {
+  outline: none;
+}
+
+.keyboard-user *:focus {
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to main content link */
+.skip-nav {
+  @apply absolute left-0 top-0 z-[9999] bg-primary text-primary-foreground px-4 py-2 font-medium;
+  @apply transform -translate-y-full;
+  @apply focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  @apply transition-transform duration-200;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --ring: 0 0% 0%;
+  }
+  
+  .dark {
+    --ring: 0 0% 100%;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* NEW: Print-specific styles */
 @media print {
   /* Hide all elements by default */
