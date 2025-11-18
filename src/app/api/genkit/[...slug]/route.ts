@@ -1,42 +1,58 @@
 // src/app/api/genkit/[...slug]/route.ts
 
-import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+// Force this route to be dynamic (not statically generated)
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import type { NextRequest } from 'next/server';
 
-// Import all your flows
-import '@/ai/flows/explain-inventory-discrepancy';
-import '@/ai/flows/suggest-inventory-update';
-import '@/ai/flows/notify-admins';
-import '@/ai/flows/send-request-email';
-import '@/ai/flows/generate-upload-signature';
+// Lazy import genkit only when needed (not during build)
+async function initializeGenkit() {
+  // Only initialize on runtime, not during build
+  if (typeof window !== 'undefined') return;
+  
+  try {
+    const { genkit } = await import('genkit');
+    const { googleAI } = await import('@genkit-ai/google-genai');
+    
+    // Import flows dynamically
+    await import('@/ai/flows/explain-inventory-discrepancy');
+    await import('@/ai/flows/suggest-inventory-update');
+    await import('@/ai/flows/notify-admins');
+    await import('@/ai/flows/send-request-email');
+    await import('@/ai/flows/generate-upload-signature');
+    
+    genkit({
+      plugins: [googleAI()],
+      model: 'googleai/gemini-2.5-flash',
+    });
+  } catch (error) {
+    console.error('Failed to initialize Genkit:', error);
+  }
+}
 
-// This file is your *production* entry point for flows.
-// It configures Genkit just for the hosted server.
-genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
-});
-
-// Use @genkit-ai/next package for Next.js integration
-// Export the Next.js handlers
-// In Next.js 15, params is now a Promise
 export async function GET(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
-  // Genkit flows are accessed via the Next.js integration
-  // This route handler is set up to work with Genkit's default behavior
+  await initializeGenkit();
   const resolvedParams = await context.params;
   
-  // Return a simple response to avoid type errors
-  // The actual flow handling is done by Genkit's internal mechanisms
-  return new Response(JSON.stringify({ message: 'Genkit flows endpoint' }), {
+  return new Response(JSON.stringify({ 
+    message: 'Genkit flows endpoint',
+    slug: resolvedParams.slug 
+  }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
 export async function POST(req: NextRequest, context: { params: Promise<{ slug: string[] }> }) {
+  await initializeGenkit();
   const resolvedParams = await context.params;
   
-  return new Response(JSON.stringify({ message: 'Genkit flows endpoint' }), {
+  return new Response(JSON.stringify({ 
+    message: 'Genkit flows endpoint',
+    slug: resolvedParams.slug 
+  }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
 }
