@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const result = {
       message: 'Success',
       data: sanitizedBody,
-      user: authResult.user.uid,
+      user: authResult.user?.uid,
     };
     
     return createAuthenticatedResponse(result, 200);
