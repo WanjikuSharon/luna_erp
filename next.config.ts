@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
     } : false,
   },
   
+  // Prevent Webpack from bundling Genkit (uses Node.js-specific features)
+  serverExternalPackages: [
+    'genkit',
+    '@genkit-ai/google-genai',
+    'google-auth-library',
+  ],
+  
   // Experimental features for better performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns', '@/components/ui'],
