@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
   
   // Performance optimizations
   reactStrictMode: true,
-  swcMinify: true,
   
   // Compiler optimizations
   compiler: {
@@ -60,5 +59,3 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 export default withBundleAnalyzer(nextConfig);
-
-export default nextConfig;
