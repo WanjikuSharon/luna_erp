@@ -431,6 +431,7 @@ export default function VendorsAndMaterialsPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* --- Tabs for Vendors and Raw Materials --- */}
