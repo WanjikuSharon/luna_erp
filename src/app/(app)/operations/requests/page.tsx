@@ -29,10 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
@@ -398,7 +398,7 @@ export default function RequestsPage() {
             {allStatuses.map(status => {
               const statusRequests = filteredRequests.filter(r => r.status === status);
               return (
-              <TabsContent key={status} value={status}>
+                <TabsContent key={status} value={status}>
                 {isLoading ? <RequestTableSkeleton /> : (
                   <Table>
                     <TableHeader>
@@ -444,7 +444,8 @@ export default function RequestsPage() {
                   </Table>
                 )}
               </TabsContent>
-            ))}
+              );
+            })}
           </Tabs>
         </CardContent>
       </Card>
