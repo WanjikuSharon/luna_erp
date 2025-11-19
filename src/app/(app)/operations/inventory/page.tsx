@@ -14,6 +14,9 @@ import {
   type VendorFormValues,
   type RawMaterialFormValues,
 } from '@/lib/schemas';
+import { ExportButton } from '@/components/data-management/ExportButton';
+import { ImportDialog } from '@/components/data-management/ImportDialog';
+import { importInventoryFromExcel } from '@/lib/import/excel-import';
 import {
   Card,
   CardContent,
@@ -315,15 +318,46 @@ export default function VendorsAndMaterialsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header and "New Request" Dialog (Unchanged) */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Vendors & Materials</h1>
-        <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-          {/* ... "Create New Delivery Request" button and dialog content (Omitted for brevity) ... */}
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create New Delivery Request
-            </Button>
-          </DialogTrigger>
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Vendors & Materials</h1>
+          <p className="text-muted-foreground mt-1">Manage raw materials, vendors, and delivery requests</p>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <ImportDialog
+            type="inventory"
+            onImport={async (file: File) => await importInventoryFromExcel(file)}
+            onImportComplete={(data) => {
+              console.log('Import completed:', data);
+              // TODO: Save to Firestore
+            }}
+          />
+          <ExportButton
+            data={(rawMaterials || []).map(m => ({
+              name: m.name,
+              sku: m.sku,
+              quantity: m.quantity,
+              unit: m.unit,
+              reorderLevel: m.reorderPoint,
+              status: m.quantity < m.reorderPoint ? 'Low Stock' : 'In Stock',
+            }))}
+            columns={[
+              { header: 'Product Name', dataKey: 'name' },
+              { header: 'SKU', dataKey: 'sku' },
+              { header: 'Quantity', dataKey: 'quantity' },
+              { header: 'Unit', dataKey: 'unit' },
+              { header: 'Reorder Level', dataKey: 'reorderLevel' },
+              { header: 'Status', dataKey: 'status' },
+            ]}
+            filename={`inventory-${new Date().toISOString().split('T')[0]}`}
+            title="Inventory Report"
+          />
+          <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create New Delivery Request
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader><DialogTitle>New Delivery Request</DialogTitle></DialogHeader>
             <Form {...requestForm}>
