@@ -24,8 +24,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SkipNav, ScreenReaderAnnouncer } from '@/lib/accessibility';
 import { KeyboardShortcutsDialog } from '@/components/accessibility/KeyboardShortcutsDialog';
 import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
-import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
-import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
 import {
   Sheet,
   SheetContent,
