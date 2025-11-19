@@ -13,6 +13,7 @@ import {
   Menu,
   LogIn,
   Users,
+  BarChart3,
 } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import { users } from '@/lib/data';
@@ -50,6 +51,7 @@ const navItems = [
   { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations', 'operations_manager'] },
   { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production', 'production_personnel'] },
   { href: '/sales', icon: Users, label: 'Sales', roles: ['admin', 'sales'] },
+  { href: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'operations_manager', 'sales', 'production'] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

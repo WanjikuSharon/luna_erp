@@ -181,7 +181,9 @@ export function AnalyticsDashboard() {
   }
 
   // Calculate trends
-  const salesTrend = calculateTrend(metrics.sales.salesByPeriod);
+  const salesTrend = calculateTrend(
+    metrics.sales.salesByPeriod.map(d => ({ date: d.date, value: d.revenue }))
+  );
 
   return (
     <div className="space-y-6">

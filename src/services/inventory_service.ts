@@ -10,6 +10,9 @@ export const COLLECTIONS = {
     USERS: 'users',
     VENDORS: 'vendors',
     SALESPEOPLE: 'salespeople',
+    SALES_LEDGER: 'sales_ledger',
+    PRODUCTION_BATCHES: 'production_batches',
+    ACTIVITIES: 'activities',
 } as const;
 
 // Re-export types for potentially easier access if needed elsewhere
