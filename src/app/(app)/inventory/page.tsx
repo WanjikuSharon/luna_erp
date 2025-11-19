@@ -108,14 +108,14 @@ export default function InventoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Inventory Status</h1>
                 <p className="text-muted-foreground">
                     A complete overview of your raw materials and finished products.
                 </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
                 <ImportDialog
                   type="inventory"
                   onImport={handleImport}
