@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRealtimeNotifications } from '@/hooks/use-realtime-activities';
-import { useAuth } from '@/firebase/provider';
+import { useUser } from '@/firebase';
 import { formatDistanceToNow } from 'date-fns';
 
 /**
@@ -20,7 +20,7 @@ import { formatDistanceToNow } from 'date-fns';
  * Shows unread count and recent notifications
  */
 export function NotificationBell() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { notifications, unreadCount, isLoading } = useRealtimeNotifications(user?.uid || null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -73,7 +73,7 @@ export function NotificationBell() {
                           {notification.action}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {notification.details || notification.userName}
+                          {notification.details || notification.user?.name || 'System'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(timestamp, { addSuffix: true })}

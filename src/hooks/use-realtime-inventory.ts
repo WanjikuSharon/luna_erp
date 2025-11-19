@@ -2,8 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, Unsubscribe } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, onSnapshot, query, orderBy, Unsubscribe, doc } from 'firebase/firestore';
+import { db } from '@/firebase';
 import type { Product, RawMaterial } from '@/lib/types';
 
 /**
@@ -104,18 +104,18 @@ export function useRealtimeProduct(productId: string | null) {
     setIsLoading(true);
 
     const unsubscribe = onSnapshot(
-      collection(db, 'products').doc(productId),
-      (doc) => {
-        if (doc.exists()) {
-          setProduct({ id: doc.id, ...doc.data() } as Product);
+      doc(db!, 'products', productId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
         } else {
           setProduct(null);
         }
         setIsLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         console.error('Error listening to product:', err);
-        setError(err as Error);
+        setError(err);
         setIsLoading(false);
       }
     );
@@ -153,7 +153,7 @@ export function useLowStockAlerts() {
       const unsubProducts = onSnapshot(productsQuery, (snapshot) => {
         const items = snapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }) as Product)
-          .filter((p) => p.quantity <= (p.reorderLevel || 10));
+          .filter((p) => p.quantity <= 10); // Products don't have reorderLevel
         
         setLowStockItems((prev) => ({ ...prev, products: items }));
         setIsLoading(false);

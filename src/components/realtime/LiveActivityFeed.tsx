@@ -61,10 +61,7 @@ export function LiveActivityFeed({ limit = 20 }: { limit?: number }) {
                     </div>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{activity.userName}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          {activity.role}
-                        </Badge>
+                        <p className="text-sm font-medium">{activity.user?.name || 'Unknown User'}</p>
                       </div>
                       <p className="text-sm text-muted-foreground">{activity.action}</p>
                       {activity.details && (

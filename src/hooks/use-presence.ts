@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { ref, onValue, set, onDisconnect, serverTimestamp } from 'firebase/database';
-import { rtdb } from '@/firebase/config';
-import { useAuth } from '@/firebase/provider';
+import { rtdb } from '@/firebase';
+import { useUser } from '@/firebase';
 
 export interface UserPresence {
   uid: string;
@@ -20,7 +20,7 @@ export interface UserPresence {
  * Updates Realtime Database with online/offline status
  */
 export function usePresence() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [onlineUsers, setOnlineUsers] = useState<UserPresence[]>([]);
 
   useEffect(() => {

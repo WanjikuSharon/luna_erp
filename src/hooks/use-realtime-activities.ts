@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, limit, Unsubscribe, where } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { db } from '@/firebase';
 import type { Activity } from '@/lib/types';
 
 /**
