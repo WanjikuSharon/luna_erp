@@ -401,7 +401,7 @@ export default function VendorsAndMaterialsPage() {
                   module: 'operations',
                   userId: user?.uid,
                   userName: user?.displayName || user?.email || 'Unknown',
-                  userAvatar: user?.photoURL,
+                  userAvatar: user?.photoURL || undefined,
                   details: `Imported ${successCount} raw materials from Excel`,
                   metadata: { successCount, errorCount: errors.length },
                 });
