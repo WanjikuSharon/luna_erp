@@ -91,6 +91,8 @@ export default function VendorsAndMaterialsPage() {
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
+  const [materialSearchTerm, setMaterialSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
@@ -113,6 +115,33 @@ export default function VendorsAndMaterialsPage() {
       vendor.email.toLowerCase().includes(vendorSearchTerm.toLowerCase())
     );
   }, [vendors, vendorSearchTerm]);
+
+  const filteredMaterials = useMemo(() => {
+    if (!rawMaterials) return [];
+    
+    let filtered = rawMaterials;
+    
+    // Apply search filter
+    if (materialSearchTerm) {
+      filtered = filtered.filter(material =>
+        material.name.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+        material.sku.toLowerCase().includes(materialSearchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(material => {
+        const status = getStatus(material);
+        if (statusFilter === 'out-of-stock') return material.quantity === 0;
+        if (statusFilter === 'low-stock') return material.quantity > 0 && material.quantity < material.reorderPoint;
+        if (statusFilter === 'in-stock') return material.quantity >= material.reorderPoint;
+        return true;
+      });
+    }
+    
+    return filtered;
+  }, [rawMaterials, materialSearchTerm, statusFilter]);
 
   // --- Forms ---
   const requestForm = useForm<MaterialRequestFormValues>({ 
@@ -702,6 +731,30 @@ export default function VendorsAndMaterialsPage() {
                      </DialogContent>
                    </Dialog>
                 </div>
+                {/* Search and Filter Controls */}
+                <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search materials by name or SKU..."
+                      className="pl-8"
+                      value={materialSearchTerm}
+                      onChange={(e) => setMaterialSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="in-stock">In Stock</SelectItem>
+                      <SelectItem value="low-stock">Low Stock</SelectItem>
+                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
             </CardHeader>
             <CardContent>
               {isLoadingMaterials ? (
@@ -723,32 +776,42 @@ export default function VendorsAndMaterialsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(rawMaterials ?? []).map((item) => {
-                      const status = getStatus(item);
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>
-                            <Badge variant={status.variant} className={status.variant === 'outline' ? 'border-amber-500 text-amber-500' : ''}>
-                              {status.text}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{item.quantity.toLocaleString()}</TableCell>
-                          <TableCell className="text-muted-foreground">{item.unit}</TableCell>
-                          <TableCell className="text-muted-foreground">{item.reorderPoint}</TableCell>
-                           {/* UPDATED: Added onClick handlers */}
-                           <TableCell className="text-right">
-                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingMaterial(item)}>
-                                <Edit className="h-4 w-4"/>
-                             </Button>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingMaterial(item)}>
-                                <Trash2 className="h-4 w-4"/>
-                             </Button>
-                           </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {filteredMaterials.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          {materialSearchTerm || statusFilter !== 'all' 
+                            ? 'No materials match your filters' 
+                            : 'No raw materials found'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredMaterials.map((item) => {
+                        const status = getStatus(item);
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={status.variant} className={status.variant === 'outline' ? 'border-amber-500 text-amber-500' : ''}>
+                                {status.text}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{item.quantity.toLocaleString()}</TableCell>
+                            <TableCell className="text-muted-foreground">{item.unit}</TableCell>
+                            <TableCell className="text-muted-foreground">{item.reorderPoint}</TableCell>
+                             {/* UPDATED: Added onClick handlers */}
+                             <TableCell className="text-right">
+                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingMaterial(item)}>
+                                  <Edit className="h-4 w-4"/>
+                               </Button>
+                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingMaterial(item)}>
+                                  <Trash2 className="h-4 w-4"/>
+                               </Button>
+                             </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               )}

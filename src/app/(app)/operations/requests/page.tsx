@@ -127,6 +127,8 @@ export default function RequestsPage() {
 
   // NEW: Add state to control the dialog
   const [verifyingRequest, setVerifyingRequest] = useState<MaterialRequest | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [vendorFilter, setVendorFilter] = useState<string>('all');
 
   // --- Data Fetching ---
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
@@ -153,6 +155,35 @@ export default function RequestsPage() {
         return acc;
     }, {} as Record<string, string>)
   }, [vendors]);
+
+  // Filtered requests based on search and vendor
+  const filteredRequests = useMemo(() => {
+    if (!materialRequests) return [];
+    
+    let filtered = materialRequests;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(request => {
+        const materialName = materialNameMap[request.materialId] || '';
+        const vendorName = vendorNameMap[request.vendorId] || '';
+        const requesterName = request.requestedByName || request.requestedBy || '';
+        
+        return (
+          materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          requesterName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    }
+    
+    // Apply vendor filter
+    if (vendorFilter !== 'all') {
+      filtered = filtered.filter(request => request.vendorId === vendorFilter);
+    }
+    
+    return filtered;
+  }, [materialRequests, searchTerm, vendorFilter, materialNameMap, vendorNameMap]);
 
   return (
     <div className="flex flex-col gap-6">
