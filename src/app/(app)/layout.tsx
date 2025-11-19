@@ -24,6 +24,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SkipNav, ScreenReaderAnnouncer } from '@/lib/accessibility';
 import { KeyboardShortcutsDialog } from '@/components/accessibility/KeyboardShortcutsDialog';
 import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
+import { NotificationBell } from '@/components/realtime/NotificationBell';
+import { OnlineUsers } from '@/components/realtime/OnlineUsers';
 import {
   Sheet,
   SheetContent,
@@ -219,6 +221,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SheetContent>
         </Sheet>
         <div className="flex w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
+          {!isUserLoading && user && (
+            <>
+              <NotificationBell />
+              <OnlineUsers />
+            </>
+          )}
           <AccessibilityMenu onShowShortcuts={() => setShowShortcuts(true)} />
           <ThemeToggle />
           {!isUserLoading && user ? (
