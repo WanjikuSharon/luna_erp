@@ -24,9 +24,19 @@ import { globalShortcuts, KeyboardShortcutManager } from '@/lib/accessibility';
  * Keyboard Shortcuts Help Dialog
  * Displays all available keyboard shortcuts to users
  */
-export function KeyboardShortcutsDialog() {
-  const [isOpen, setIsOpen] = useState(false);
+export function KeyboardShortcutsDialog({ 
+  isOpen: externalIsOpen, 
+  onOpenChange: externalOnOpenChange 
+}: { 
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [shortcuts, setShortcuts] = useState<any[]>([]);
+
+  // Use external control if provided, otherwise use internal state
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalOnOpenChange || setInternalIsOpen;
 
   useEffect(() => {
     // Register help shortcut (? key)
