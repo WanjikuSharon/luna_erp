@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { SecurityAlertsCard } from '@/components/admin/SecurityAlertsCard';
 // UPDATED: Import DailySalesReport and ProductionBatch
 import type { User, Activity, DailySalesReport, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2, FileText, DollarSign } from 'lucide-react';
@@ -36,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { format, formatDistanceToNow, subDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useUnresolvedSecurityCount } from '@/hooks/use-security-events';
 // UPDATED: Import 'where' and 'Timestamp'
 import { collection, query, orderBy, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore'; 
 import { COLLECTIONS } from '@/services/inventory_service';
@@ -180,6 +182,9 @@ export default function AdminDashboardPage() {
       [firestore]
     );
 
+    // NEW: Fetch security events count
+    const { count: securityAlertsCount, isLoading: isLoadingSecurityCount } = useUnresolvedSecurityCount();
+
     // Combine all loading states
     const isLoading = isLoadingUsers || isLoadingAdminActivities || isLoadingOpsActivities || isLoadingProdBatches || isLoadingSalesLedger || isLoadingVanStock || isLoadingSalesReports;
 
@@ -299,8 +304,12 @@ export default function AdminDashboardPage() {
               <AlertTriangle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div> 
-              <p className="text-xs text-muted-foreground">e.g., failed logins (TODO)</p>
+              {isLoadingSecurityCount ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{securityAlertsCount}</div>
+              )}
+              <p className="text-xs text-muted-foreground">unresolved security events</p>
             </CardContent>
           </Card>
         </div>
@@ -467,6 +476,9 @@ export default function AdminDashboardPage() {
             />
           </CardContent>
         </Card>
+
+        {/* --- NEW: Security Alerts Card --- */}
+        <SecurityAlertsCard />
     </div>
 
     {/* --- Dialogs for User Management (Unchanged) --- */}
