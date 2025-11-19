@@ -29,6 +29,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SecurityAlertsCard } from '@/components/admin/SecurityAlertsCard';
+import { BackupManagementCard } from '@/components/admin/BackupManagementCard';
 // UPDATED: Import DailySalesReport and ProductionBatch
 import type { User, Activity, DailySalesReport, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2, FileText, DollarSign } from 'lucide-react';
@@ -479,6 +480,9 @@ export default function AdminDashboardPage() {
 
         {/* --- NEW: Security Alerts Card --- */}
         <SecurityAlertsCard />
+
+        {/* --- NEW: Backup Management Card --- */}
+        <BackupManagementCard />
     </div>
 
     {/* --- Dialogs for User Management (Unchanged) --- */}
