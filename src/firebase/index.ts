@@ -3,7 +3,28 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
+
+// Initialize Firebase app and export instances
+let firebaseApp: FirebaseApp | null = null;
+let auth: ReturnType<typeof getAuth> | null = null;
+let db: ReturnType<typeof getFirestore> | null = null;
+let rtdb: ReturnType<typeof getDatabase> | null = null;
+
+if (typeof window !== 'undefined') {
+  if (!getApps().length) {
+    firebaseApp = initializeApp(firebaseConfig);
+  } else {
+    firebaseApp = getApp();
+  }
+  
+  auth = getAuth(firebaseApp);
+  db = getFirestore(firebaseApp);
+  rtdb = getDatabase(firebaseApp);
+}
+
+export { auth, db, rtdb };
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -20,7 +41,8 @@ export function getSdks(firebaseApp: FirebaseApp) {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: getFirestore(firebaseApp),
+    database: getDatabase(firebaseApp)
   };
 }
 
