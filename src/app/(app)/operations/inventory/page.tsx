@@ -70,6 +70,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Search, Edit, Trash2, Loader2 } from 'lucide-react';
@@ -97,6 +98,9 @@ export default function VendorsAndMaterialsPage() {
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [deletingMaterial, setDeletingMaterial] = useState<RawMaterial | null>(null);
+  const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
   // --- Data Fetching ---
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
@@ -297,6 +301,31 @@ export default function VendorsAndMaterialsPage() {
     return { text: 'In Stock', variant: 'secondary' as const };
   }
 
+  // Batch selection handlers
+  const toggleMaterialSelection = (id: string) => {
+    setSelectedMaterials(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedMaterials.size === filteredMaterials.length) {
+      setSelectedMaterials(new Set());
+    } else {
+      setSelectedMaterials(new Set(filteredMaterials.map(m => m.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedMaterials(new Set());
+  };
+
   // --- UPDATED: Handle Delete Vendor (with logging) ---
   async function handleDeleteVendor() {
     if (!deletingVendor) return;
@@ -341,6 +370,49 @@ export default function VendorsAndMaterialsPage() {
       });
     } finally {
       setDeletingMaterial(null); // Close the dialog
+    }
+  }
+
+  // --- Batch Delete Materials ---
+  async function handleBatchDelete() {
+    if (selectedMaterials.size === 0) return;
+    
+    setIsBatchDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      const deletePromises = Array.from(selectedMaterials).map(async (id) => {
+        try {
+          const docRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, id);
+          await deleteDoc(docRef);
+          successCount++;
+        } catch (error) {
+          failCount++;
+          logger.error(`Failed to delete material ${id}:`, error);
+        }
+      });
+
+      await Promise.all(deletePromises);
+
+      // Log the batch deletion
+      await logOperationActivity(`batch deleted ${successCount} materials`);
+
+      toast({
+        title: 'Batch Delete Complete',
+        description: `${successCount} materials deleted${failCount > 0 ? `, ${failCount} failed` : ''}`,
+      });
+
+      clearSelection();
+    } catch (error) {
+      toast({
+        title: 'Batch Delete Failed',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBatchDeleting(false);
+      setShowBatchDeleteConfirm(false);
     }
   }
 
@@ -755,6 +827,27 @@ export default function VendorsAndMaterialsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Batch Actions */}
+                {selectedMaterials.size > 0 && (
+                  <div className="flex items-center gap-2 mt-3 p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">
+                      {selectedMaterials.size} material{selectedMaterials.size > 1 ? 's' : ''} selected
+                    </p>
+                    <div className="flex gap-2 ml-auto">
+                      <Button variant="outline" size="sm" onClick={clearSelection}>
+                        Clear
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => setShowBatchDeleteConfirm(true)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Selected
+                      </Button>
+                    </div>
+                  </div>
+                )}
             </CardHeader>
             <CardContent>
               {isLoadingMaterials ? (
@@ -766,6 +859,12 @@ export default function VendorsAndMaterialsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={selectedMaterials.size === filteredMaterials.length && filteredMaterials.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Item Name</TableHead>
                       <TableHead>Status</TableHead>
@@ -789,6 +888,12 @@ export default function VendorsAndMaterialsPage() {
                         const status = getStatus(item);
                         return (
                           <TableRow key={item.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedMaterials.has(item.id)}
+                                onCheckedChange={() => toggleMaterialSelection(item.id)}
+                              />
+                            </TableCell>
                             <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>
@@ -842,6 +947,29 @@ export default function VendorsAndMaterialsPage() {
         onOpenChange={() => setDeletingMaterial(null)}
         onDelete={handleDeleteMaterial}
       />
+
+      {/* Batch Delete Confirmation Dialog */}
+      <AlertDialog open={showBatchDeleteConfirm} onOpenChange={setShowBatchDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedMaterials.size} Material{selectedMaterials.size > 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected materials from the inventory.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBatchDeleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleBatchDelete}
+              disabled={isBatchDeleting}
+            >
+              {isBatchDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete {selectedMaterials.size} Material{selectedMaterials.size > 1 ? 's' : ''}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

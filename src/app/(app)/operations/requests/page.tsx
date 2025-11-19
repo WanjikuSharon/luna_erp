@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -46,17 +47,27 @@ const statusConfig = {
 };
 
 // UPDATED: RequestRow to show all new info
-function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: {
+function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, isSelected, onToggleSelect }: {
   request: MaterialRequest,
   materialNameMap: Record<string, string>,
   vendorNameMap: Record<string, string>,
   onVerifyClick: (request: MaterialRequest) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   // Display the user ID directly (or could be enhanced with a users collection lookup)
   const status = statusConfig[request.status];
 
   return (
     <TableRow>
+      {onToggleSelect && (
+        <TableCell>
+          <Checkbox
+            checked={isSelected || false}
+            onCheckedChange={() => onToggleSelect(request.id)}
+          />
+        </TableCell>
+      )}
       <TableCell>
         <div className="font-medium">{materialNameMap[request.materialId] || 'Unknown Material'}</div>
       </TableCell>
@@ -137,6 +148,9 @@ export default function RequestsPage() {
   const [verifyingRequest, setVerifyingRequest] = useState<MaterialRequest | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [vendorFilter, setVendorFilter] = useState<string>('all');
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+  const [batchStatus, setBatchStatus] = useState<'approved' | 'rejected' | null>(null);
 
   // --- Data Fetching ---
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
@@ -193,6 +207,66 @@ export default function RequestsPage() {
     return filtered;
   }, [materialRequests, searchTerm, vendorFilter, materialNameMap, vendorNameMap]);
 
+  // Batch selection handlers
+  const toggleRequestSelection = (id: string) => {
+    setSelectedRequests(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = (requests: MaterialRequest[]) => {
+    const requestIds = requests.map(r => r.id);
+    if (selectedRequests.size === requestIds.length) {
+      setSelectedRequests(new Set());
+    } else {
+      setSelectedRequests(new Set(requestIds));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedRequests(new Set());
+  };
+
+  // Batch status update
+  const handleBatchStatusUpdate = async (status: 'approved' | 'rejected') => {
+    if (selectedRequests.size === 0) return;
+    
+    setIsBatchUpdating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      const updatePromises = Array.from(selectedRequests).map(async (id) => {
+        try {
+          const docRef = doc(firestore, COLLECTIONS.REQUESTS, id);
+          await updateDoc(docRef, { status });
+          successCount++;
+        } catch (error) {
+          failCount++;
+          console.error(`Failed to update request ${id}:`, error);
+        }
+      });
+
+      await Promise.all(updatePromises);
+
+      // Success notification would go here
+      console.log(`Batch update complete: ${successCount} updated, ${failCount} failed`);
+      
+      clearSelection();
+    } catch (error) {
+      console.error('Batch update failed:', error);
+    } finally {
+      setIsBatchUpdating(false);
+      setBatchStatus(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -233,6 +307,36 @@ export default function RequestsPage() {
               </SelectContent>
             </Select>
           </div>
+          {/* Batch Actions */}
+          {selectedRequests.size > 0 && (
+            <div className="flex items-center gap-2 mt-3 p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium">
+                {selectedRequests.size} request{selectedRequests.size > 1 ? 's' : ''} selected
+              </p>
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" size="sm" onClick={clearSelection}>
+                  Clear
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => handleBatchStatusUpdate('approved')}
+                  disabled={isBatchUpdating}
+                >
+                  {isBatchUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Approve Selected
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => handleBatchStatusUpdate('rejected')}
+                  disabled={isBatchUpdating}
+                >
+                  Reject Selected
+                </Button>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all">
@@ -249,6 +353,12 @@ export default function RequestsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={selectedRequests.size === filteredRequests.length && filteredRequests.length > 0}
+                          onCheckedChange={() => toggleSelectAll(filteredRequests)}
+                        />
+                      </TableHead>
                       <TableHead>Material</TableHead>
                       <TableHead className="text-center">Quantity & Unit</TableHead>
                       <TableHead>Status</TableHead>
@@ -261,7 +371,7 @@ export default function RequestsPage() {
                   <TableBody>
                     {filteredRequests.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           {searchTerm || vendorFilter !== 'all'
                             ? 'No requests match your filters'
                             : 'No material requests found'}
@@ -275,6 +385,8 @@ export default function RequestsPage() {
                           materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
                           onVerifyClick={setVerifyingRequest}
+                          isSelected={selectedRequests.has(req.id)}
+                          onToggleSelect={toggleRequestSelection}
                         />
                       ))
                     )}
@@ -283,12 +395,20 @@ export default function RequestsPage() {
               )}
             </TabsContent>
 
-            {allStatuses.map(status => (
+            {allStatuses.map(status => {
+              const statusRequests = filteredRequests.filter(r => r.status === status);
+              return (
               <TabsContent key={status} value={status}>
                 {isLoading ? <RequestTableSkeleton /> : (
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={selectedRequests.size === statusRequests.length && statusRequests.length > 0}
+                            onCheckedChange={() => toggleSelectAll(statusRequests)}
+                          />
+                        </TableHead>
                         <TableHead>Material</TableHead>
                         <TableHead className="text-center">Quantity & Unit</TableHead>
                         <TableHead>Status</TableHead>
@@ -299,22 +419,24 @@ export default function RequestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRequests.filter(r => r.status === status).length === 0 ? (
+                      {statusRequests.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                             {searchTerm || vendorFilter !== 'all'
                               ? `No ${statusConfig[status].label.toLowerCase()} requests match your filters`
                               : `No ${statusConfig[status].label.toLowerCase()} requests`}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredRequests.filter(r => r.status === status).map(req => (
+                        statusRequests.map(req => (
                           <RequestRow
                             key={req.id}
                             request={req}
                             materialNameMap={materialNameMap}
                             vendorNameMap={vendorNameMap}
                             onVerifyClick={setVerifyingRequest}
+                            isSelected={selectedRequests.has(req.id)}
+                            onToggleSelect={toggleRequestSelection}
                           />
                         ))
                       )}
