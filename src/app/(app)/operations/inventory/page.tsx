@@ -79,6 +79,7 @@ import type { RawMaterial, Vendor } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
 import { handleError, getErrorMessage } from '@/lib/error-handler';
+import { logActivity } from '@/services/activity_logger';
 
 const logger = createLogger('operations-inventory');
 
@@ -327,9 +328,76 @@ export default function VendorsAndMaterialsPage() {
           <ImportDialog
             type="inventory"
             onImport={async (file: File) => await importInventoryFromExcel(file)}
-            onImportComplete={(data) => {
-              console.log('Import completed:', data);
-              // TODO: Save to Firestore
+            onImportComplete={async (data) => {
+              try {
+                // Save each imported item to Firestore
+                let successCount = 0;
+                const errors: string[] = [];
+
+                for (const item of data) {
+                  try {
+                    // Check if SKU already exists
+                    const existingMaterial = rawMaterials?.find(
+                      (m) => m.sku === item.SKU
+                    );
+
+                    if (existingMaterial) {
+                      // Update existing material
+                      await updateDoc(doc(firestore, COLLECTIONS.RAW_MATERIALS, existingMaterial.id), {
+                        name: item['Product Name'],
+                        quantity: item.Quantity,
+                        unit: item.Unit,
+                        reorderPoint: item['Reorder Level'],
+                      });
+                    } else {
+                      // Add new material
+                      await addDoc(collection(firestore, COLLECTIONS.RAW_MATERIALS), {
+                        name: item['Product Name'],
+                        sku: item.SKU,
+                        quantity: item.Quantity,
+                        unit: item.Unit,
+                        reorderPoint: item['Reorder Level'],
+                      });
+                    }
+                    successCount++;
+                  } catch (error) {
+                    errors.push(`${item.SKU}: ${getErrorMessage(error)}`);
+                    logger.error('Failed to import item:', error);
+                  }
+                }
+
+                // Log activity
+                await logActivity(firestore, {
+                  action: 'import',
+                  module: 'operations',
+                  userId: user?.uid,
+                  userName: user?.displayName || user?.email || 'Unknown',
+                  userAvatar: user?.photoURL,
+                  details: `Imported ${successCount} raw materials from Excel`,
+                  metadata: { successCount, errorCount: errors.length },
+                });
+
+                // Show result
+                if (errors.length === 0) {
+                  toast({
+                    title: 'Import Successful',
+                    description: `${successCount} raw materials imported successfully`,
+                  });
+                } else {
+                  toast({
+                    title: 'Import Completed with Errors',
+                    description: `${successCount} imported, ${errors.length} failed`,
+                    variant: 'destructive',
+                  });
+                }
+              } catch (error) {
+                logger.error('Import failed:', error);
+                toast({
+                  title: 'Import Failed',
+                  description: getErrorMessage(error),
+                  variant: 'destructive',
+                });
+              }
             }}
           />
           <ExportButton
