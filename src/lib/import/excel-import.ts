@@ -202,3 +202,50 @@ export async function generateInventoryTemplate() {
     ]
   );
 }
+
+// Export aliases for backward compatibility
+export const importInventoryFromExcel = importInventory;
+
+/**
+ * Generate import template (legacy function for backward compatibility)
+ */
+export async function generateImportTemplate(type: 'inventory' | 'sales' | 'production'): Promise<void> {
+  const templates = {
+    inventory: {
+      headers: ['name', 'sku', 'quantity', 'unit', 'reorderLevel', 'category'],
+      sample: [{
+        name: 'Sample Product',
+        sku: 'SKU-001',
+        quantity: 100,
+        unit: 'pieces',
+        reorderLevel: 20,
+        category: 'General',
+      }],
+    },
+    sales: {
+      headers: ['orderID', 'customerName', 'products', 'totalAmount', 'status', 'date'],
+      sample: [{
+        orderID: 'ORD-001',
+        customerName: 'John Doe',
+        products: 'Product A, Product B',
+        totalAmount: 150.00,
+        status: 'completed',
+        date: '2024-01-15',
+      }],
+    },
+    production: {
+      headers: ['batchID', 'productName', 'quantity', 'status', 'startDate', 'completionDate'],
+      sample: [{
+        batchID: 'BATCH-001',
+        productName: 'Sample Product',
+        quantity: 500,
+        status: 'completed',
+        startDate: '2024-01-01',
+        completionDate: '2024-01-10',
+      }],
+    },
+  };
+
+  const config = templates[type];
+  await generateTemplate(config.headers, `${type}-import-template.xlsx`, config.sample);
+}
