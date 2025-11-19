@@ -81,8 +81,8 @@ export default function InventoryPage() {
     ...(products || []).map((item: Product) => ({
       name: item.name,
       sku: item.sku || 'N/A',
-      quantity: item.stockQuantity || 0,
-      unit: 'pieces',
+      quantity: item.quantity || 0,
+      unit: item.unit || 'pieces',
       reorderLevel: 0,
       status: 'In Stock',
     })),
