@@ -145,7 +145,7 @@ export async function exportCollectionToCSV(
     const documents = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-    }));
+    })) as Record<string, any>[];
 
     // Get all unique keys
     const keys = new Set<string>();
