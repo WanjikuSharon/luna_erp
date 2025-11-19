@@ -259,15 +259,25 @@ export default function RequestsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(materialRequests ?? []).map(req => (
-                      <RequestRow
-                        key={req.id}
-                        request={req}
-                        materialNameMap={materialNameMap}
-                        vendorNameMap={vendorNameMap}
-                        onVerifyClick={setVerifyingRequest}
-                      />
-                    ))}
+                    {filteredRequests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          {searchTerm || vendorFilter !== 'all'
+                            ? 'No requests match your filters'
+                            : 'No material requests found'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRequests.map(req => (
+                        <RequestRow
+                          key={req.id}
+                          request={req}
+                          materialNameMap={materialNameMap}
+                          vendorNameMap={vendorNameMap}
+                          onVerifyClick={setVerifyingRequest}
+                        />
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               )}
@@ -289,15 +299,25 @@ export default function RequestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(materialRequests ?? []).filter(r => r.status === status).map(req => (
-                        <RequestRow
-                          key={req.id}
-                          request={req}
-                          materialNameMap={materialNameMap}
-                          vendorNameMap={vendorNameMap}
-                          onVerifyClick={setVerifyingRequest}
-                        />
-                      ))}
+                      {filteredRequests.filter(r => r.status === status).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            {searchTerm || vendorFilter !== 'all'
+                              ? `No ${statusConfig[status].label.toLowerCase()} requests match your filters`
+                              : `No ${statusConfig[status].label.toLowerCase()} requests`}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredRequests.filter(r => r.status === status).map(req => (
+                          <RequestRow
+                            key={req.id}
+                            request={req}
+                            materialNameMap={materialNameMap}
+                            vendorNameMap={vendorNameMap}
+                            onVerifyClick={setVerifyingRequest}
+                          />
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 )}
