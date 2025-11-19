@@ -23,6 +23,9 @@ import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SkipNav, ScreenReaderAnnouncer } from '@/lib/accessibility';
 import { KeyboardShortcutsDialog } from '@/components/accessibility/KeyboardShortcutsDialog';
+import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
+import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
+import { AccessibilityMenu } from '@/components/accessibility/AccessibilityMenu';
 import {
   Sheet,
   SheetContent,
@@ -40,7 +43,7 @@ import Image from 'next/image';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
@@ -55,6 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // ALWAYS call useMemoFirebase - never conditionally
   const userDocRef = useMemoFirebase(
@@ -138,7 +142,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full flex-col">
       <SkipNav mainContentId="main-content" />
       <ScreenReaderAnnouncer />
-      <KeyboardShortcutsDialog />
+      <KeyboardShortcutsDialog isOpen={showShortcuts} onOpenChange={setShowShortcuts} />
       
       <header 
         className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-50"
@@ -217,6 +221,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SheetContent>
         </Sheet>
         <div className="flex w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
+          <AccessibilityMenu onShowShortcuts={() => setShowShortcuts(true)} />
           <ThemeToggle />
           {!isUserLoading && user ? (
             <UserNav />
