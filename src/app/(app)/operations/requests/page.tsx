@@ -37,13 +37,6 @@ const statusConfig = {
   rejected: { label: 'Rejected', icon: XCircle },
 };
 
-// --- Mock Data (for vendors) ---
-const MOCK_VENDORS: Vendor[] = [
-    { id: 'v1', name: 'Tech Supplies Inc.', email: 'techsupplies@example.com' },
-    { id: 'v2', name: 'Global Materials Co.', email: 'globalmaterials@example.com' },
-    { id: 'v3', name: 'Quality Components Ltd.', email: 'qualityparts@example.com' },
-];
-
 // UPDATED: RequestRow to show all new info
 function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: {
   request: MaterialRequest,
@@ -138,14 +131,11 @@ export default function RequestsPage() {
   // --- Data Fetching ---
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
   const rawMaterialsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.RAW_MATERIALS), [firestore]);
-  // TODO: Fetch vendors from Firestore
-  // const vendorsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.VENDORS), [firestore]);
+  const vendorsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.VENDORS), [firestore]);
   
   const { data: materialRequests, isLoading: isLoadingRequests } = useCollection<MaterialRequest>(requestsRef);
   const { data: rawMaterials, isLoading: isLoadingMaterials } = useCollection<RawMaterial>(rawMaterialsRef);
-  // const { data: vendors, isLoading: isLoadingVendors } = useCollection<Vendor>(vendorsRef);
-  const vendors = MOCK_VENDORS; // Using mock
-  const isLoadingVendors = false; // Using mock
+  const { data: vendors, isLoading: isLoadingVendors } = useCollection<Vendor>(vendorsRef);
 
   const isLoading = isLoadingRequests || isLoadingMaterials || isLoadingVendors;
 
