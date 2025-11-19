@@ -45,6 +45,7 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
+  { href: '/inventory', icon: Warehouse, label: 'Inventory', roles: ['admin', 'operations', 'operations_manager', 'production', 'production_personnel'] },
   { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations', 'operations_manager'] },
   { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production', 'production_personnel'] },
   { href: '/sales', icon: Users, label: 'Sales', roles: ['admin', 'sales'] },
