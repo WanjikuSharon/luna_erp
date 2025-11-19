@@ -19,6 +19,9 @@ import type { RawMaterial, Product } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ExportButton } from '@/components/data-management/ExportButton';
+import { ImportDialog } from '@/components/data-management/ImportDialog';
+import { importInventoryFromExcel } from '@/lib/import/excel-import';
 
 function getStatus(item: RawMaterial): { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
     if (item.quantity === 0) return { text: 'Out of Stock', variant: 'destructive' };
@@ -65,13 +68,66 @@ export default function InventoryPage() {
 
   const isLoading = isLoadingMaterials || isLoadingProducts;
 
+  // Prepare data for export
+  const allInventory = [
+    ...(rawMaterials || []).map((item: RawMaterial) => ({
+      name: item.name,
+      sku: item.sku,
+      quantity: item.quantity,
+      unit: item.unit,
+      reorderLevel: item.reorderPoint,
+      status: getStatus(item).text,
+    })),
+    ...(products || []).map((item: Product) => ({
+      name: item.name,
+      sku: item.sku || 'N/A',
+      quantity: item.stockQuantity || 0,
+      unit: 'pieces',
+      reorderLevel: 0,
+      status: 'In Stock',
+    })),
+  ];
+
+  const exportColumns = [
+    { header: 'Product Name', dataKey: 'name' },
+    { header: 'SKU', dataKey: 'sku' },
+    { header: 'Quantity', dataKey: 'quantity' },
+    { header: 'Unit', dataKey: 'unit' },
+    { header: 'Reorder Level', dataKey: 'reorderLevel' },
+    { header: 'Status', dataKey: 'status' },
+  ];
+
+  const handleImport = async (file: File) => {
+    return await importInventoryFromExcel(file);
+  };
+
+  const handleImportComplete = (data: any[]) => {
+    console.log('Import completed:', data);
+    // TODO: Save imported data to Firestore
+  };
+
   return (
     <div className="flex flex-col gap-6">
-        <div>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">Inventory Status</h1>
-            <p className="text-muted-foreground">
-                A complete overview of your raw materials and finished products.
-            </p>
+        <div className="flex justify-between items-start">
+            <div>
+                <h1 className="text-3xl font-bold font-headline tracking-tight">Inventory Status</h1>
+                <p className="text-muted-foreground">
+                    A complete overview of your raw materials and finished products.
+                </p>
+            </div>
+            <div className="flex gap-2">
+                <ImportDialog
+                  type="inventory"
+                  onImport={handleImport}
+                  onImportComplete={handleImportComplete}
+                />
+                <ExportButton
+                  data={allInventory}
+                  columns={exportColumns}
+                  filename={`inventory-${new Date().toISOString().split('T')[0]}`}
+                  title="Inventory Report"
+                />
+            </div>
         </div>
         <Card>
             <CardHeader>
