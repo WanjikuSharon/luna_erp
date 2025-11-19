@@ -7,3 +7,4 @@ import '@/ai/flows/suggest-inventory-update.ts';
 import '@/ai/flows/notify-admins.ts';
 import '@/ai/flows/send-request-email.ts';
 import '@/ai/flows/generate-upload-signature.ts'; // Ensure this flow is loaded
+import '@/ai/flows/analyze-trends.ts'; // AI trend analysis flow
