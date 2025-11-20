@@ -48,10 +48,10 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
+  { href: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'sales'] },
   { href: '/operations', icon: Group, label: 'Operations', roles: ['admin', 'operations', 'operations_manager'] },
   { href: '/production', icon: Factory, label: 'Production', roles: ['admin', 'production', 'production_personnel'] },
   { href: '/sales', icon: Users, label: 'Sales', roles: ['admin', 'sales'] },
-  { href: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'operations_manager', 'sales', 'production'] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
