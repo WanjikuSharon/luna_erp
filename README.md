@@ -46,6 +46,18 @@ A comprehensive Enterprise Resource Planning (ERP) system built for Luna Industr
 - **System-wide Oversight**: Complete visibility into operations, production, sales, and inventory
 - **Activity Logs**: Separate activity logs for each department (operations, production, sales, admin)
 - **User Management**: Manage user accounts, roles, and permissions
+- **Security Alerts**: Real-time monitoring of security events with severity classification
+- **Backup Management**: Automated backup creation, collection exports, and data restoration
+
+### Analytics & Reporting
+- **Interactive Dashboard**: Real-time charts and KPIs for sales, inventory, production, and operations
+- **Custom Report Builder**: Create tailored reports with field selection and date filtering
+- **Multiple Export Formats**: Generate reports in Excel, PDF, or CSV formats
+- **Scheduled Reports**: Automate report generation and email delivery (daily, weekly, monthly, quarterly)
+- **AI-Powered Trend Analysis**: Machine learning insights, predictions, and recommendations
+- **Anomaly Detection**: Automatically identify unusual patterns and outliers in data
+- **Predictive Analytics**: 7-period forecasts with confidence levels
+- **Multi-Module Analytics**: Comprehensive views across all business functions
 
 ### Security & Access Control
 - **Role-Based Access Control**: Granular permissions for admins, operations, production, and sales personnel
@@ -60,6 +72,10 @@ A comprehensive Enterprise Resource Planning (ERP) system built for Luna Industr
 - **Profile Management**: User profile customization and settings
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 - **Dark Mode Support**: Theme toggle for comfortable viewing
+- **Batch Operations**: Multi-select and bulk actions for inventory and requests
+- **Advanced Search & Filtering**: Powerful search capabilities across all modules
+- **Import/Export**: Excel import for inventory, comprehensive export options
+- **Vendor Management**: Complete vendor database with real-time integration
 
 ## 🎨 Design System
 
@@ -164,6 +180,7 @@ luna_erp/
 │   ├── app/                    # Next.js app directory
 │   │   ├── (app)/             # Protected app routes
 │   │   │   ├── admin/         # Admin dashboard and user management
+│   │   │   ├── analytics/     # Analytics dashboard and reporting
 │   │   │   ├── inventory/     # Inventory management (raw materials, packaging, products)
 │   │   │   ├── operations/    # Operations management (requests, deliveries, vendors)
 │   │   │   ├── production/    # Production tracking (batches, recipes, inputs/outputs)
@@ -181,6 +198,8 @@ luna_erp/
 │   ├── components/            # React components
 │   │   ├── ui/                # shadcn/ui components
 │   │   ├── layout/            # Layout components (navigation, user menu)
+│   │   ├── admin/             # Admin-specific components (backup, security)
+│   │   ├── analytics/         # Analytics and reporting components
 │   │   ├── operations/        # Operations-specific components
 │   │   ├── production/        # Production-specific components
 │   │   └── reports/           # Reporting components
@@ -192,8 +211,12 @@ luna_erp/
 │   ├── lib/                   # Utility functions and types
 │   └── services/              # Business logic services
 │       ├── activity_logger.ts # Activity logging service
+│       ├── analytics_service.ts # Analytics and metrics aggregation
+│       ├── backup_service.ts  # Backup and restore operations
 │       ├── email_service.ts   # Email notification service
 │       ├── inventory_service.ts # Inventory operations
+│       ├── scheduled_reports_service.ts # Scheduled report management
+│       ├── security_service.ts # Security event logging
 │       └── user_service.ts    # User management
 ├── docs/                      # Documentation
 ├── scripts/                   # Utility scripts
@@ -202,10 +225,10 @@ luna_erp/
 
 ## 🔐 User Roles
 
-- **Admin**: Full read-only access to monitor all system activities, user management, and system configuration
-- **Operations Manager**: Request materials, verify deliveries, manage vendors, update stock
+- **Admin**: Full access to all system features including user management, analytics, security monitoring, and backup management
+- **Sales Personnel**: Access to sales module, van stock management, and analytics dashboard
+- **Operations Manager**: Request materials, verify deliveries, manage vendors, update stock, batch operations
 - **Production Personnel**: Create production batches, manage recipes, record production inputs and outputs
-- **Sales Personnel**: Manage van stock, submit daily sales reports, maintain sales ledger
 
 ## 🛠 Tech Stack
 
@@ -331,14 +354,16 @@ Refer to [Next.js deployment documentation](https://nextjs.org/docs/deployment) 
 
 ## 📈 Future Enhancements
 
-- Advanced analytics and reporting dashboards
+- Email integration for scheduled reports (SendGrid/AWS SES)
 - Mobile application for field operations
 - Barcode/QR code scanning for inventory
 - Multi-location warehouse management
-- Automated reorder point calculations
-- Integration with accounting software
+- Integration with accounting software (QuickBooks, Xero)
 - Real-time notifications via push/SMS
-- Export functionality for reports (PDF/Excel)
+- Advanced forecasting with seasonal adjustments
+- Multi-currency support for international operations
+- Supplier portal for direct order placement
+- Quality control and inspection workflows
 
 ## �📄 License
 
