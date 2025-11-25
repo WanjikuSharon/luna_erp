@@ -21,7 +21,11 @@ if (typeof window !== 'undefined') {
   
   auth = getAuth(firebaseApp);
   db = getFirestore(firebaseApp);
-  rtdb = getDatabase(firebaseApp);
+  
+  // Only initialize Realtime Database if URL is configured
+  if (firebaseConfig.databaseURL) {
+    rtdb = getDatabase(firebaseApp);
+  }
 }
 
 export { auth, db, rtdb };
@@ -38,12 +42,23 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  return {
+  const sdks: {
+    firebaseApp: FirebaseApp;
+    auth: ReturnType<typeof getAuth>;
+    firestore: ReturnType<typeof getFirestore>;
+    database?: ReturnType<typeof getDatabase>;
+  } = {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: getFirestore(firebaseApp),
-    database: getDatabase(firebaseApp)
   };
+  
+  // Only initialize Realtime Database if URL is configured
+  if (firebaseConfig.databaseURL) {
+    sdks.database = getDatabase(firebaseApp);
+  }
+  
+  return sdks;
 }
 
 export * from './provider';
