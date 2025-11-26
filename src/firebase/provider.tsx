@@ -85,14 +85,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       async (firebaseUser) => { // Auth state determined
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         
-        // Sync user to Firestore when they log in
+        // Sync user to Firestore when they log in (with delay to prevent race conditions)
         if (firebaseUser && firestore) {
-          try {
-            await syncUserToFirestore(firestore, firebaseUser);
-          } catch (error) {
-            logger.error("Failed to sync user to Firestore:", error);
-            // Don't block login on sync failure
-          }
+          // Delay sync to allow login flow to complete first
+          setTimeout(async () => {
+            try {
+              await syncUserToFirestore(firestore, firebaseUser);
+            } catch (error) {
+              logger.error("Failed to sync user to Firestore:", error);
+              // Don't block login on sync failure
+            }
+          }, 500);
         }
       },
       (error) => { // Auth listener error
