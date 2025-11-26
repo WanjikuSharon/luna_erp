@@ -36,7 +36,6 @@ function serializeForComparison(data: any): any {
   }
   return data;
 }
-export type WithId<T> = T & { id: string };
 
 /**
  * Interface for the return value of the useCollection hook.
