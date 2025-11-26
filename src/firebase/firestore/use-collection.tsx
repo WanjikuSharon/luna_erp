@@ -72,58 +72,83 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
-    const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
-        }
-        
-        // Only update state if data actually changed
-        setData(prevData => {
-          // If no previous data, always update
-          if (!prevData) return results;
+    let unsubscribe: (() => void) | null = null;
+    let isSubscribed = true;
+
+    try {
+      // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
+      unsubscribe = onSnapshot(
+        memoizedTargetRefOrQuery,
+        (snapshot: QuerySnapshot<DocumentData>) => {
+          if (!isSubscribed) return;
           
-          // If length changed, update
-          if (prevData.length !== results.length) return results;
+          const results: ResultItemType[] = [];
+          for (const doc of snapshot.docs) {
+            results.push({ ...(doc.data() as T), id: doc.id });
+          }
           
-          // Deep comparison - check if any document changed
-          const hasChanges = results.some((newDoc, index) => {
-            const oldDoc = prevData[index];
-            return JSON.stringify(newDoc) !== JSON.stringify(oldDoc);
+          // Only update state if data actually changed
+          setData(prevData => {
+            // If no previous data, always update
+            if (!prevData) return results;
+            
+            // If length changed, update
+            if (prevData.length !== results.length) return results;
+            
+            // Deep comparison - check if any document changed
+            const hasChanges = results.some((newDoc, index) => {
+              const oldDoc = prevData[index];
+              return JSON.stringify(newDoc) !== JSON.stringify(oldDoc);
+            });
+            
+            // Only return new array if there are actual changes
+            return hasChanges ? results : prevData;
           });
           
-          // Only return new array if there are actual changes
-          return hasChanges ? results : prevData;
-        });
-        
-        setError(null);
-        setIsLoading(false);
-      },
-      (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+          setError(null);
+          setIsLoading(false);
+        },
+        (error: FirestoreError) => {
+          if (!isSubscribed) return;
+          
+          // This logic extracts the path from either a ref or a query
+          const path: string =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          })
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+          setError(contextualError)
+          setData(null)
+          setIsLoading(false)
 
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
+        }
+      );
+    } catch (error) {
+      // Handle initialization errors (e.g., Firestore internal state errors)
+      console.error('useCollection: Failed to create snapshot listener:', error);
+      setError(error as Error);
+      setData(null);
+      setIsLoading(false);
+    }
+
+    return () => {
+      isSubscribed = false;
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (error) {
+          // Silently handle cleanup errors
+          console.warn('useCollection: Error during cleanup:', error);
+        }
       }
-    );
-
-    return () => unsubscribe();
+    };
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
