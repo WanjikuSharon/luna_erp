@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card'; // We only need Card and CardContent
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import {
@@ -20,11 +20,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doc } from 'firebase/firestore'; // Import doc
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase'; // Import Firestore hooks
-import type { User as UserType } from '@/lib/types'; // Import UserType
-import { signInWithEmailAndPassword } from 'firebase/auth'; // Import for login
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { createLogger } from '@/lib/logger';
+import type { User as UserType } from '@/lib/types';
 
 const logger = createLogger('LoginPage');
 
@@ -34,71 +33,16 @@ export default function LoginPage() {
   const [showNoAccountDialog, setShowNoAccountDialog] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // --- All your existing hooks (unchanged) ---
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   
-  // --- New Logo URL ---
   const newLogoUrl = 'https://i.postimg.cc/9FzKTLkD/WhatsApp_Image_2025-10-15_at_00.18.06_514d4d8f.jpg';
-  
-  // --- New Firestore user data fetching ---
-  const firestore = useFirestore(); 
-  const userDocRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [firestore, user]
-  );
-  const { data: userData, isLoading: isUserDataLoading, error: userDataError } = useDoc<UserType>(userDocRef);
 
-  // Log any errors from Firestore
-  useEffect(() => {
-    if (userDataError) {
-      logger.error('Firestore error when fetching user data:', userDataError);
-    }
-  }, [userDataError]);
 
-  // --- Sign out any existing user when visiting login page ---
-  useEffect(() => {
-    if (!isUserLoading && user && !hasCheckedAuth && !isSubmitting) {
-      logger.debug('User already logged in, signing out to show login form');
-      auth.signOut();
-      setHasCheckedAuth(true);
-    } else if (!isUserLoading && !user && !hasCheckedAuth) {
-      setHasCheckedAuth(true);
-    }
-  }, [isUserLoading, user, auth, hasCheckedAuth, isSubmitting]);
 
-  // --- Redirect after successful login ---
-  useEffect(() => {
-    // Only redirect if user just logged in (has both auth user and userData)
-    if (!isUserLoading && !isUserDataLoading && user && userData && isSubmitting) {
-      logger.info('User authenticated, redirecting to dashboard:', userData);
-      
-      // Map role to dashboard route
-      const role = userData.role;
-      
-      // Small delay to ensure state is settled before redirect
-      setTimeout(() => {
-        if (role === 'admin') {
-          router.push('/admin');
-        } else if (role === 'operations' || role === 'operations_manager') {
-          router.push('/operations');
-        } else if (role === 'production' || role === 'production_personnel') {
-          router.push('/production');
-        } else if (role === 'sales') {
-          router.push('/sales');
-        } else {
-          // Unknown role, default to operations
-          router.push('/operations');
-        }
-      }, 100);
-    }
-  }, [user, isUserLoading, userData, isUserDataLoading, router, isSubmitting]);
-
-  // --- Your existing login logic ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -113,13 +57,44 @@ export default function LoginPage() {
       setIsSubmitting(false);
       return;
     }
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Redirect is handled by the useEffect hook above
+      // Sign in
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Wait for auth state to settle
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Fetch user data once to determine role
+      const userDocRef = doc(firestore, 'users', userCredential.user.uid);
+      const userSnap = await getDoc(userDocRef);
+      
+      if (!userSnap.exists()) {
+        logger.warn('User document not found, defaulting to operations');
+        router.push('/operations');
+        return;
+      }
+      
+      const userData = userSnap.data() as UserType;
+      const role = userData.role;
+      
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
+      
+      // Redirect based on role
+      if (role === 'admin') {
+        router.push('/admin');
+      } else if (role === 'operations' || role === 'operations_manager') {
+        router.push('/operations');
+      } else if (role === 'production' || role === 'production_personnel') {
+        router.push('/production');
+      } else if (role === 'sales') {
+        router.push('/sales');
+      } else {
+        router.push('/operations');
+      }
     } catch (error: any) {
       logger.error("Login failed:", error);
       toast({
@@ -222,7 +197,7 @@ export default function LoginPage() {
                 <Button 
                   type="submit" 
                   className="w-full bg-[#FF8C42] hover:bg-[#ff7a28] text-white" 
-                  disabled={isSubmitting || isUserLoading || isUserDataLoading}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
                 </Button>
