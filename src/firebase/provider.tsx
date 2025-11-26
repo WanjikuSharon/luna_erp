@@ -10,6 +10,22 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('FirebaseProvider');
 
+// Global error handler for Firestore internal errors
+if (typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    const errorMessage = args[0]?.toString() || '';
+    
+    // Suppress Firestore internal assertion errors (they're usually recoverable)
+    if (errorMessage.includes('FIRESTORE') && errorMessage.includes('INTERNAL ASSERTION FAILED')) {
+      logger.warn('Firestore internal error suppressed:', errorMessage);
+      return;
+    }
+    
+    originalError.apply(console, args);
+  };
+}
+
 interface FirebaseProviderProps {
   children: ReactNode;
   firebaseApp: FirebaseApp;
