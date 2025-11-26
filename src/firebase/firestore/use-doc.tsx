@@ -59,48 +59,73 @@ export function useDoc<T = any>(
     setError(null);
     // Optional: setData(null); // Clear previous data instantly
 
-    const unsubscribe = onSnapshot(
-      memoizedDocRef,
-      (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists()) {
-          const newData = { ...(snapshot.data() as T), id: snapshot.id };
+    let unsubscribe: (() => void) | null = null;
+    let isSubscribed = true;
+
+    try {
+      unsubscribe = onSnapshot(
+        memoizedDocRef,
+        (snapshot: DocumentSnapshot<DocumentData>) => {
+          if (!isSubscribed) return;
           
-          // Only update state if data actually changed
-          setData(prevData => {
-            // If no previous data, always update
-            if (!prevData) return newData;
+          if (snapshot.exists()) {
+            const newData = { ...(snapshot.data() as T), id: snapshot.id };
             
-            // Deep comparison - check if document changed
-            if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
-              return newData;
-            }
-            
-            // No changes, return previous data to prevent re-render
-            return prevData;
-          });
-        } else {
-          // Document does not exist
-          setData(null);
+            // Only update state if data actually changed
+            setData(prevData => {
+              // If no previous data, always update
+              if (!prevData) return newData;
+              
+              // Deep comparison - check if document changed
+              if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
+                return newData;
+              }
+              
+              // No changes, return previous data to prevent re-render
+              return prevData;
+            });
+          } else {
+            // Document does not exist
+            setData(null);
+          }
+          setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
+          setIsLoading(false);
+        },
+        (error: FirestoreError) => {
+          if (!isSubscribed) return;
+          
+          const contextualError = new FirestorePermissionError({
+            operation: 'get',
+            path: memoizedDocRef.path,
+          })
+
+          setError(contextualError)
+          setData(null)
+          setIsLoading(false)
+
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
         }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
-        setIsLoading(false);
-      },
-      (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        })
+      );
+    } catch (error) {
+      // Handle initialization errors (e.g., Firestore internal state errors)
+      console.error('useDoc: Failed to create snapshot listener:', error);
+      setError(error as Error);
+      setData(null);
+      setIsLoading(false);
+    }
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+    return () => {
+      isSubscribed = false;
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (error) {
+          // Silently handle cleanup errors
+          console.warn('useDoc: Error during cleanup:', error);
+        }
       }
-    );
-
-    return () => unsubscribe();
+    };
   }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
 
   return { data, isLoading, error };
