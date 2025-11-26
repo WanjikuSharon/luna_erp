@@ -3,42 +3,49 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 
-// Initialize Firebase app and export instances
+// Single source of truth for Firebase instances
 let firebaseApp: FirebaseApp | null = null;
 let auth: ReturnType<typeof getAuth> | null = null;
 let db: ReturnType<typeof getFirestore> | null = null;
 let rtdb: ReturnType<typeof getDatabase> | null = null;
 
-if (typeof window !== 'undefined') {
-  if (!getApps().length) {
-    firebaseApp = initializeApp(firebaseConfig);
-  } else {
-    firebaseApp = getApp();
-  }
-  
-  auth = getAuth(firebaseApp);
-  db = getFirestore(firebaseApp);
-  
-  // Only initialize Realtime Database if URL is configured
-  if (firebaseConfig.databaseURL) {
-    rtdb = getDatabase(firebaseApp);
-  }
-}
-
-export { auth, db, rtdb };
-
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
+    firebaseApp = initializeApp(firebaseConfig);
+    
+    // Initialize Firestore with proper settings to prevent internal errors
+    try {
+      db = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({ 
+          tabManager: persistentMultipleTabManager() 
+        })
+      });
+    } catch (error) {
+      // If already initialized, just get the instance
+      db = getFirestore(firebaseApp);
+    }
+    
+    auth = getAuth(firebaseApp);
+    
+    // Only initialize Realtime Database if URL is configured
+    if (firebaseConfig.databaseURL) {
+      rtdb = getDatabase(firebaseApp);
+    }
+  } else {
+    firebaseApp = getApp();
+    db = getFirestore(firebaseApp);
+    auth = getAuth(firebaseApp);
+    
+    if (firebaseConfig.databaseURL) {
+      rtdb = getDatabase(firebaseApp);
+    }
   }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+  return getSdks(firebaseApp);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
@@ -49,17 +56,20 @@ export function getSdks(firebaseApp: FirebaseApp) {
     database?: ReturnType<typeof getDatabase>;
   } = {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    auth: auth || getAuth(firebaseApp),
+    firestore: db || getFirestore(firebaseApp),
   };
   
   // Only initialize Realtime Database if URL is configured
   if (firebaseConfig.databaseURL) {
-    sdks.database = getDatabase(firebaseApp);
+    sdks.database = rtdb || getDatabase(firebaseApp);
   }
   
   return sdks;
 }
+
+// Export for backward compatibility (but don't initialize here)
+export { auth, db as firestore, db, rtdb };
 
 export * from './provider';
 export * from './client-provider';
