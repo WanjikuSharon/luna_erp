@@ -258,3 +258,41 @@ export type VanStockLog = {
   items: VanStockItem[]; // Array of products
   createdAt: any; // Firestore Timestamp
 };
+
+// --- NEW: Types for eTIMS Integration ---
+
+// Represents customer information for eTIMS invoice
+export type EtimsCustomerInfo = {
+  name: string;
+  pin?: string; // Customer's PIN (optional for B2C)
+  phoneNumber?: string;
+  email?: string;
+};
+
+// Represents a line item for eTIMS invoice
+export type EtimsInvoiceLineItem = {
+  itemCode: string; // Product SKU
+  itemName: string;
+  quantity: number;
+  unitPrice: number; // Price before tax
+  taxRate: number; // e.g., 0.16 for 16% VAT
+  discountAmount?: number;
+};
+
+// Represents the full eTIMS invoice data stored with sales entry
+export type EtimsInvoiceData = {
+  invoiceNumber: string; // Official KRA invoice number
+  qrCode: string; // QR code data
+  scuReceiptNumber: string; // SCU receipt number
+  scuDateTime: string; // ISO timestamp from KRA
+  verificationUrl: string; // URL to verify
+  submittedAt: any; // Firestore Timestamp
+  customer: EtimsCustomerInfo;
+  items: EtimsInvoiceLineItem[];
+  totals: {
+    subtotal: number;
+    totalTax: number;
+    totalDiscount: number;
+    total: number;
+  };
+};
