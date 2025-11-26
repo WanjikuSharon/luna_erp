@@ -229,6 +229,14 @@ export type DailySalesLedgerEntry = {
   submittedBy: string; // User ID of submitter
   submittedByName: string; // Name of submitter at time of submission
   createdAt: any; // Firestore Timestamp
+  // eTIMS Integration Fields
+  etimsInvoiceNumber?: string; // Official KRA invoice number
+  etimsQrCode?: string; // QR code data from KRA
+  etimsScuReceiptNumber?: string; // SCU receipt number
+  etimsSubmittedAt?: any; // Firestore Timestamp when submitted to eTIMS
+  etimsVerificationUrl?: string; // URL to verify the invoice
+  etimsStatus?: 'pending' | 'submitted' | 'failed'; // Status of eTIMS submission
+  etimsError?: string; // Error message if submission failed
 };
 
 // NEW: Represents an item in a stock out/in log
