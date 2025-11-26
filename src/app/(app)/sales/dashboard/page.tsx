@@ -75,10 +75,12 @@ export default function SalesDashboardPage() {
   const salespeopleRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.SALESPEOPLE), [firestore]);
   const { data: salespeople, isLoading: isLoadingSalespeople } = useCollection<Salesperson>(salespeopleRef);
 
-  // Get today's start and end timestamps
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayStartTimestamp = Timestamp.fromDate(todayStart);
+  // Memoize today's start timestamp to prevent constant re-creation
+  const todayStartTimestamp = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return Timestamp.fromDate(todayStart);
+  }, []); // Empty deps - only calculate once per mount
 
   // Fetch today's sales ledger entries
   const ledgerTodayRef = useMemoFirebase(
