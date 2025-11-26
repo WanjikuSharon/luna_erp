@@ -8,11 +8,34 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
+export type WithId<T> = T & { id: string };
+
+/**
+ * Helper to serialize Firestore data for comparison
+ * Converts Timestamps to ISO strings to avoid false positives
+ */
+function serializeForComparison(data: any): any {
+  if (data instanceof Timestamp) {
+    return data.toMillis();
+  }
+  if (Array.isArray(data)) {
+    return data.map(serializeForComparison);
+  }
+  if (data && typeof data === 'object') {
+    const serialized: any = {};
+    for (const key in data) {
+      serialized[key] = serializeForComparison(data[key]);
+    }
+    return serialized;
+  }
+  return data;
+}
 export type WithId<T> = T & { id: string };
 
 /**
@@ -95,10 +118,12 @@ export function useCollection<T = any>(
             // If length changed, update
             if (prevData.length !== results.length) return results;
             
-            // Deep comparison - check if any document changed
+            // Deep comparison using serialization to handle Timestamps
             const hasChanges = results.some((newDoc, index) => {
               const oldDoc = prevData[index];
-              return JSON.stringify(newDoc) !== JSON.stringify(oldDoc);
+              const oldSerialized = JSON.stringify(serializeForComparison(oldDoc));
+              const newSerialized = JSON.stringify(serializeForComparison(newDoc));
+              return oldSerialized !== newSerialized;
             });
             
             // Only return new array if there are actual changes
