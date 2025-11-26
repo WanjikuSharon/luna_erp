@@ -7,12 +7,34 @@ import {
   DocumentData,
   FirestoreError,
   DocumentSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
+
+/**
+ * Helper to serialize Firestore data for comparison
+ * Converts Timestamps to ISO strings to avoid false positives
+ */
+function serializeForComparison(data: any): any {
+  if (data instanceof Timestamp) {
+    return data.toMillis();
+  }
+  if (Array.isArray(data)) {
+    return data.map(serializeForComparison);
+  }
+  if (data && typeof data === 'object') {
+    const serialized: any = {};
+    for (const key in data) {
+      serialized[key] = serializeForComparison(data[key]);
+    }
+    return serialized;
+  }
+  return data;
+}
 
 /**
  * Interface for the return value of the useDoc hook.
@@ -76,8 +98,11 @@ export function useDoc<T = any>(
               // If no previous data, always update
               if (!prevData) return newData;
               
-              // Deep comparison - check if document changed
-              if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
+              // Deep comparison using serialization to handle Timestamps
+              const oldSerialized = JSON.stringify(serializeForComparison(prevData));
+              const newSerialized = JSON.stringify(serializeForComparison(newData));
+              
+              if (oldSerialized !== newSerialized) {
                 return newData;
               }
               
