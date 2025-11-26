@@ -39,8 +39,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import type { Salesperson, DailySalesLedgerEntry } from '@/lib/types';
-import { Loader2, CalendarIcon, PlusCircle, Save } from 'lucide-react';
+import { Loader2, CalendarIcon, PlusCircle, Save, FileCheck, Eye, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EtimsInvoice } from '@/components/reports/EtimsInvoice';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import {
   useFirestore,
@@ -66,6 +68,11 @@ export default function SalesLedgerPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser } = useUser();
+
+  // State for eTIMS integration
+  const [isSubmittingToEtims, setIsSubmittingToEtims] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<DailySalesLedgerEntry | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   // --- Data Fetching ---
   const salespeopleRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.SALESPEOPLE), [firestore]);
@@ -110,6 +117,7 @@ export default function SalesLedgerPage() {
         amountSold: data.amountSold,
         submittedBy: submitterId,
         createdAt: serverTimestamp(),
+        etimsStatus: 'pending', // Initialize eTIMS status
       });
 
       toast({ title: "Record Saved", description: `Sale for ${selectedSalesperson.name} has been logged.` });
@@ -119,6 +127,68 @@ export default function SalesLedgerPage() {
       logger.error("Error saving ledger entry:", error);
       toast({ variant: "destructive", title: "Save Failed", description: "Could not save the record." });
     }
+  }
+
+  // --- eTIMS Invoice Submission Handler ---
+  async function handleGenerateEtimsInvoice(entry: DailySalesLedgerEntry) {
+    setIsSubmittingToEtims(entry.id);
+
+    try {
+      const response = await fetch('/api/etims/submit-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          salesLedgerEntryId: entry.id,
+          customer: {
+            name: entry.agentName,
+            phoneNumber: entry.agentPhone,
+          },
+          items: [
+            {
+              itemCode: 'SALES-TRANSACTION',
+              itemName: 'Sales Transaction',
+              quantity: entry.productsSold,
+              unitPrice: entry.amountSold / entry.productsSold,
+              taxRate: 0.16, // 16% VAT
+            },
+          ],
+          paymentMode: 'CASH',
+          receiptType: 'SALE',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate eTIMS invoice');
+      }
+
+      toast({
+        title: "eTIMS Invoice Generated",
+        description: `Invoice Number: ${data.invoiceNumber}`,
+      });
+
+      // Refresh the entry data to show updated eTIMS info
+      // In a real app, you'd refetch the data here
+      
+    } catch (error: any) {
+      logger.error('eTIMS invoice generation failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'eTIMS Submission Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmittingToEtims(null);
+    }
+  }
+
+  // --- View eTIMS Invoice ---
+  function handleViewInvoice(entry: DailySalesLedgerEntry) {
+    setSelectedInvoice(entry);
+    setShowInvoice(true);
   }
 
   return (
@@ -220,6 +290,9 @@ export default function SalesLedgerPage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Sales Entries</CardTitle>
+          <CardDescription>
+            Click "Generate eTIMS Invoice" to submit the sale to KRA and get an official tax invoice.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -230,15 +303,16 @@ export default function SalesLedgerPage() {
                 <TableHead>Agent Phone</TableHead>
                 <TableHead className="text-center">Products Sold</TableHead>
                 <TableHead className="text-right">Amount (KSh)</TableHead>
-                <TableHead className="text-right">Logged</TableHead>
+                <TableHead className="text-center">eTIMS Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingLedger && (
-                <TableRow><TableCell colSpan={6}><Skeleton className="h-24 w-full" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={7}><Skeleton className="h-24 w-full" /></TableCell></TableRow>
               )}
               {(ledgerEntries ?? []).length === 0 && !isLoadingLedger && (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">No sales logged yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24">No sales logged yet.</TableCell></TableRow>
               )}
               {(ledgerEntries ?? []).map((entry) => (
                 <TableRow key={entry.id}>
@@ -247,8 +321,49 @@ export default function SalesLedgerPage() {
                   <TableCell className="text-muted-foreground">{entry.agentPhone || 'N/A'}</TableCell>
                   <TableCell className="text-center font-medium">{entry.productsSold}</TableCell>
                   <TableCell className="text-right font-medium">{entry.amountSold.toLocaleString()}</TableCell>
-                  <TableCell className="text-right text-muted-foreground text-xs">
-                    {formatDistanceToNow(entry.createdAt.toDate(), { addSuffix: true })}
+                  <TableCell className="text-center">
+                    {entry.etimsStatus === 'submitted' && (
+                      <Badge variant="default" className="bg-green-600">
+                        <FileCheck className="mr-1 h-3 w-3" />
+                        Submitted
+                      </Badge>
+                    )}
+                    {entry.etimsStatus === 'failed' && (
+                      <Badge variant="destructive">
+                        Failed
+                      </Badge>
+                    )}
+                    {(!entry.etimsStatus || entry.etimsStatus === 'pending') && (
+                      <Badge variant="outline">
+                        Pending
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {entry.etimsStatus === 'submitted' && entry.etimsInvoiceNumber ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewInvoice(entry)}
+                        >
+                          <Eye className="mr-1 h-3 w-3" />
+                          View Invoice
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleGenerateEtimsInvoice(entry)}
+                          disabled={isSubmittingToEtims === entry.id}
+                        >
+                          {isSubmittingToEtims === entry.id && (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          )}
+                          <FileCheck className="mr-1 h-3 w-3" />
+                          Generate eTIMS Invoice
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -256,6 +371,13 @@ export default function SalesLedgerPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* eTIMS Invoice Dialog */}
+      <EtimsInvoice
+        salesEntry={selectedInvoice}
+        open={showInvoice}
+        onOpenChange={setShowInvoice}
+      />
     </div>
   );
 }
