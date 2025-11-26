@@ -188,3 +188,92 @@ body:not(.keyboard-user) *:focus {
     margin: 0 !important;
   }
 }
+
+/* ============================================
+   eTIMS INVOICE PRINT STYLES
+   ============================================ */
+@media print {
+  /* Hide everything except the invoice */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the print area */
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  
+  /* Position the print area at the top of the page */
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide elements with no-print class */
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .print-area {
+    page-break-after: avoid;
+  }
+  
+  /* Print-friendly table styles */
+  table {
+    border-collapse: collapse;
+  }
+  
+  /* Ensure borders are visible */
+  table,
+  th,
+  td {
+    border: 1px solid #333 !important;
+  }
+  
+  /* Remove background colors for printing */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  /* Keep specific backgrounds for invoice structure */
+  .print-area table thead,
+  .print-area .border-b-2 {
+    border-bottom: 2px solid #000 !important;
+  }
+  
+  .print-area .border-t {
+    border-top: 1px solid #000 !important;
+  }
+  
+  /* Optimize font sizes for print */
+  .print-area {
+    font-size: 12pt;
+  }
+  
+  .print-area h1 {
+    font-size: 18pt;
+  }
+  
+  .print-area h2 {
+    font-size: 16pt;
+  }
+  
+  .print-area h3 {
+    font-size: 14pt;
+  }
+  
+  /* Ensure QR code is visible */
+  .print-area img,
+  .print-area canvas {
+    display: block !important;
+  }
+}
