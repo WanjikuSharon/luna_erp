@@ -119,9 +119,11 @@ export default function AdminDashboardPage() {
     const usersRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.USERS), [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersRef);
     
-    // Get timestamp for 24 hours ago
-    const oneDayAgo = subDays(new Date(), 1);
-    const oneDayAgoTimestamp = Timestamp.fromDate(oneDayAgo);
+    // Memoize timestamp for 24 hours ago to prevent constant re-creation
+    const oneDayAgoTimestamp = useMemo(() => {
+      const oneDayAgo = subDays(new Date(), 1);
+      return Timestamp.fromDate(oneDayAgo);
+    }, []); // Empty deps - only calculate once per mount
 
     // Query for admin activities
     const adminActivitiesRef = useMemoFirebase(
