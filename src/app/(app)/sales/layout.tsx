@@ -10,6 +10,7 @@ import {
   PackageOpen,
   BookMarked,
   Package,
+  FileCheck,
 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,11 @@ const sidebarNavItems = [
     title: 'Daily Sales Ledger', // Form from 1000497324.jpg
     href: '/sales/ledger',
     icon: BookMarked,
+  },
+  {
+    title: 'eTIMS Setup', // KRA eTIMS integration setup
+    href: '/sales/etims-setup',
+    icon: FileCheck,
   },
 ];
 
