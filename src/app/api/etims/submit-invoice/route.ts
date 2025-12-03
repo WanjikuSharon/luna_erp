@@ -66,6 +66,13 @@ export async function POST(request: NextRequest) {
       
       // Update the sales entry with error status
       const adminApp = initAdmin();
+      if (!adminApp) {
+        logger.error('Firebase Admin not initialized');
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        );
+      }
       const db = getFirestore(adminApp);
       
       await db.collection('daily_sales_ledger').doc(salesLedgerEntryId).update({
@@ -84,6 +91,13 @@ export async function POST(request: NextRequest) {
 
     // Update the sales entry with eTIMS information
     const adminApp = initAdmin();
+    if (!adminApp) {
+      logger.error('Firebase Admin not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
     const db = getFirestore(adminApp);
     
     await db.collection('daily_sales_ledger').doc(salesLedgerEntryId).update({
