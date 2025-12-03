@@ -45,6 +45,13 @@ export async function POST(request: NextRequest) {
 
     // Update products in Firestore with eTIMS registration status
     const adminApp = initAdmin();
+    if (!adminApp) {
+      logger.error('Firebase Admin not initialized');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
     const db = getFirestore(adminApp);
     const batch = db.batch();
 
@@ -91,6 +98,12 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const adminApp = initAdmin();
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
     const db = getFirestore(adminApp);
     
     const productsSnapshot = await db.collection('products').get();
