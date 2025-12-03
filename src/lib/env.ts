@@ -34,6 +34,16 @@ const envSchema = z.object({
   
   // Email Service (ZeptoMail)
   ZEPTOMAIL_API_KEY: z.string().min(1, 'ZeptoMail API key is required'),
+  
+  // KRA eTIMS Configuration (Optional - only needed for tax invoicing)
+  ETIMS_API_KEY: z.string().optional(),
+  ETIMS_API_SECRET: z.string().optional(),
+  ETIMS_DEVICE_SERIAL: z.string().optional(),
+  ETIMS_COMPANY_PIN: z.string().optional(),
+  ETIMS_BRANCH_ID: z.string().optional(),
+  ETIMS_USE_SANDBOX: z.string().optional(),
+  ETIMS_SANDBOX_URL: z.string().optional(),
+  ETIMS_PRODUCTION_URL: z.string().optional(),
 });
 
 // Type for the validated environment variables
@@ -77,6 +87,14 @@ function validateEnv(): Env {
       NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '',
       CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
       ZEPTOMAIL_API_KEY: process.env.ZEPTOMAIL_API_KEY || '',
+      ETIMS_API_KEY: process.env.ETIMS_API_KEY,
+      ETIMS_API_SECRET: process.env.ETIMS_API_SECRET,
+      ETIMS_DEVICE_SERIAL: process.env.ETIMS_DEVICE_SERIAL,
+      ETIMS_COMPANY_PIN: process.env.ETIMS_COMPANY_PIN,
+      ETIMS_BRANCH_ID: process.env.ETIMS_BRANCH_ID,
+      ETIMS_USE_SANDBOX: process.env.ETIMS_USE_SANDBOX,
+      ETIMS_SANDBOX_URL: process.env.ETIMS_SANDBOX_URL,
+      ETIMS_PRODUCTION_URL: process.env.ETIMS_PRODUCTION_URL,
     };
   }
 
