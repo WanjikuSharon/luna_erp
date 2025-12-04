@@ -49,6 +49,7 @@ export type Product = {
   sku: string;
   quantity: number;
   unit: 'units';
+  price: number;
   category?: string;
   packSize?: number;
 };
