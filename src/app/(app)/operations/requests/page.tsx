@@ -32,31 +32,40 @@ import {
 import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDialog';
+import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import { useToast } from '@/hooks/use-toast';
 
 // Status config remains the same
 const statusConfig = {
   pending: { label: 'Pending', icon: Clock },
   approved: { label: 'Approved', icon: CheckCircle },
-  delivered: { label: 'Delivered', icon: Truck },
+  awaiting_delivery: { label: 'Awaiting Delivery', icon: Truck },
+  delivered: { label: 'Delivered', icon: FileCheck },
   rejected: { label: 'Rejected', icon: XCircle },
 };
 
 // UPDATED: RequestRow to show all new info
-function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, isSelected, onToggleSelect }: {
+function RequestRow({ request, materialNameMap, vendorNameMap, vendors, onVerifyClick, onApprove, onReject, onContactSupplier, onMarkAwaitingDelivery, isSelected, onToggleSelect }: {
   request: MaterialRequest,
   materialNameMap: Record<string, string>,
   vendorNameMap: Record<string, string>,
+  vendors: Vendor[] | undefined,
   onVerifyClick: (request: MaterialRequest) => void;
+  onApprove: (request: MaterialRequest) => void;
+  onReject: (request: MaterialRequest) => void;
+  onContactSupplier: (request: MaterialRequest, vendor: Vendor) => void;
+  onMarkAwaitingDelivery: (request: MaterialRequest) => void;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
   // Display the user ID directly (or could be enhanced with a users collection lookup)
   const status = statusConfig[request.status];
+  const vendor = vendors?.find(v => v.id === request.vendorId);
 
   return (
     <TableRow>
@@ -65,6 +74,7 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, is
           <Checkbox
             checked={isSelected || false}
             onCheckedChange={() => onToggleSelect(request.id)}
+            disabled={request.status !== 'pending'}
           />
         </TableCell>
       )}
@@ -77,6 +87,9 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, is
           <status.icon className="mr-2 h-3.5 w-3.5" />
           {status.label}
         </Badge>
+        {request.supplierContacted && request.status === 'approved' && (
+          <div className="text-xs text-muted-foreground mt-1">Supplier contacted</div>
+        )}
       </TableCell>
       <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Supplier'}</TableCell> {/* Added supplier */}
       <TableCell className="text-sm">{request.requestedByName || request.requestedBy || 'Unknown'}</TableCell>
@@ -85,24 +98,44 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, is
       </TableCell>
       {/* UPDATED: This cell now shows different buttons based on status */}
       <TableCell className="text-right">
-        {request.status === 'pending' && (
-          <Button variant="outline" size="sm" onClick={() => onVerifyClick(request)}>
-            Verify Delivery
-          </Button>
-        )}
-        {request.status === 'delivered' && request.deliveryNoteUrl && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={request.deliveryNoteUrl} target="_blank" rel="noopener noreferrer">
-              <FileCheck className="mr-2 h-4 w-4" />
-              View Note
-            </a>
-          </Button>
-        )}
-        {(request.status === 'approved' || request.status === 'rejected') && (
-          <Button variant="ghost" size="sm" disabled>
-            {request.status}
-          </Button>
-        )}
+        <div className="flex gap-2 justify-end">
+          {request.status === 'pending' && (
+            <>
+              <Button variant="default" size="sm" onClick={() => onApprove(request)}>
+                Approve
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => onReject(request)}>
+                Reject
+              </Button>
+            </>
+          )}
+          {request.status === 'approved' && !request.supplierContacted && vendor && (
+            <Button variant="default" size="sm" onClick={() => onContactSupplier(request, vendor)}>
+              Contact Supplier
+            </Button>
+          )}
+          {request.status === 'approved' && request.supplierContacted && (
+            <Button variant="outline" size="sm" onClick={() => onMarkAwaitingDelivery(request)}>
+              Mark Delivery Scheduled
+            </Button>
+          )}
+          {request.status === 'awaiting_delivery' && (
+            <Button variant="outline" size="sm" onClick={() => onVerifyClick(request)}>
+              Verify Delivery
+            </Button>
+          )}
+          {request.status === 'delivered' && request.deliveryNoteUrl && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={request.deliveryNoteUrl} target="_blank" rel="noopener noreferrer">
+                <FileCheck className="mr-2 h-4 w-4" />
+                View Note
+              </a>
+            </Button>
+          )}
+          {request.status === 'rejected' && (
+            <span className="text-sm text-muted-foreground">Rejected</span>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

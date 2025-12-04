@@ -83,10 +83,12 @@ export type MaterialRequest = {
   vendorId: string; // Added
   requestedBy: string;
   requestedByName: string; // Name of requester at time of request
-  status: 'pending' | 'approved' | 'delivered' | 'rejected';
+  status: 'pending' | 'approved' | 'awaiting_delivery' | 'delivered' | 'rejected';
   createdAt: any; // For Firestore Timestamp
   updatedAt: any; // For Firestore Timestamp
   deliveryNoteUrl?: string; // URL to the delivery note stored in Cloudinary
+  supplierContacted?: boolean; // True when email sent to supplier
+  supplierContactedAt?: any; // Timestamp when supplier was emailed
 };
 
 export type Activity = {
