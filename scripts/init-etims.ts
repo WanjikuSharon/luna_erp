@@ -9,21 +9,22 @@
  */
 
 const CONFIG = {
-  url: 'https://etims-api-sbx.kra.go.ke/etims-api/selectInitOsdcInfo', // Sandbox Init URL
-  tin: 'P052454082G',          // Your KRA PIN from .env.local
+  baseUrl: 'https://etims-api-sbx.kra.go.ke/etims-api/selectInitOsdcInfo',
+  tin: 'P052454082G',          // Your KRA PIN
   branchId: '00',              // Your branch ID
-  dvcSrlNo: 'LUNA_19_2025'     // Your device serial number from .env.local
+  dvcSrlNo: 'P052454082G'      // Using TIN as serial number
 };
 
 async function initializeDevice() {
   console.log('🚀 Initializing eTIMS Device...');
+  console.log('Target URL:', CONFIG.baseUrl);
   console.log('Device Serial:', CONFIG.dvcSrlNo);
   console.log('TIN:', CONFIG.tin);
   console.log('Branch ID:', CONFIG.branchId);
   console.log('');
 
   try {
-    const response = await fetch(CONFIG.url, {
+    const response = await fetch(CONFIG.baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
