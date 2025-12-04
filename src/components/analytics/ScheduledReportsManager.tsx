@@ -49,8 +49,8 @@ const REPORT_FIELDS: Record<ScheduledReport['reportType'], Array<{ id: string; l
     { id: 'supervisorName', label: 'Supervisor' },
   ],
   operations: [
-    { id: 'materialId', label: 'Material' },
-    { id: 'vendorId', label: 'Vendor' },
+    { id: 'materialId', label: 'Raw Material' },
+    { id: 'vendorId', label: 'Supplier' },
     { id: 'quantity', label: 'Quantity' },
     { id: 'status', label: 'Status' },
     { id: 'requestedByName', label: 'Requested By' },
