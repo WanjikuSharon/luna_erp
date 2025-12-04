@@ -20,26 +20,13 @@ const adminNavItems = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
+    description: 'Overview, users, analytics',
   },
   {
     title: 'Request Approvals',
     href: '/admin/approvals',
     icon: ClipboardCheck,
-  },
-  {
-    title: 'User Management',
-    href: '/admin/users',
-    icon: Users,
-  },
-  {
-    title: 'Security & Backup',
-    href: '/admin/security',
-    icon: Shield,
-  },
-  {
-    title: 'System Settings',
-    href: '/admin/settings',
-    icon: Settings,
+    description: 'Approve material requests',
   },
 ];
 

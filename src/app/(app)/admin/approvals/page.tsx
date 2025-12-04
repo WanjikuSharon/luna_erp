@@ -12,9 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, Clock, Loader2, Mail, Truck } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { sendRequestEmail } from '@/ai/flows/send-request-email';
 
 export default function ApprovalsPage() {
   const { toast } = useToast();
@@ -92,61 +91,7 @@ export default function ApprovalsPage() {
     }
   };
 
-  const handleContactSupplier = async (request: MaterialRequest) => {
-    setProcessingId(request.id);
-    try {
-      const material = rawMaterials?.find(m => m.id === request.materialId);
-      const vendor = vendorMap[request.vendorId];
-      
-      if (!material || !vendor) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Material or vendor not found.' });
-        return;
-      }
 
-      // Send email to supplier
-      await sendRequestEmail({
-        requestId: request.id,
-        materialName: material.name,
-        quantity: request.quantity,
-        requesterName: request.requestedByName,
-        vendorName: vendor.name,
-        vendorEmail: vendor.email,
-        requestUrl: `${window.location.origin}/operations/requests?requestId=${request.id}`,
-      });
-
-      // Update request to mark supplier as contacted
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, {
-        supplierContacted: true,
-        supplierContactedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
-      toast({ title: 'Supplier Contacted', description: `Email sent to ${vendor.name}` });
-    } catch (error) {
-      console.error('Failed to contact supplier:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to send email to supplier.' });
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const handleMarkAwaitingDelivery = async (request: MaterialRequest) => {
-    setProcessingId(request.id);
-    try {
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, { 
-        status: 'awaiting_delivery',
-        updatedAt: serverTimestamp()
-      });
-      toast({ title: 'Status Updated', description: 'Marked as awaiting delivery.' });
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
-    } finally {
-      setProcessingId(null);
-    }
-  };
 
   const RequestRow = ({ request }: { request: MaterialRequest }) => {
     const material = materialNameMap[request.materialId];
@@ -184,26 +129,10 @@ export default function ApprovalsPage() {
               </Button>
             </div>
           )}
-          {request.status === 'approved' && !request.supplierContacted && (
-            <Button
-              size="sm"
-              onClick={() => handleContactSupplier(request)}
-              disabled={isProcessing}
-            >
-              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-1" />}
-              Contact Supplier
-            </Button>
-          )}
-          {request.status === 'approved' && request.supplierContacted && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleMarkAwaitingDelivery(request)}
-              disabled={isProcessing}
-            >
-              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4 mr-1" />}
-              Schedule Delivery
-            </Button>
+          {request.status === 'approved' && (
+            <Badge variant="outline" className="text-xs">
+              Approved - Operations will contact supplier
+            </Badge>
           )}
         </TableCell>
       </TableRow>
@@ -275,7 +204,7 @@ export default function ApprovalsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Approved Requests</CardTitle>
-              <CardDescription>Requests you have approved - contact suppliers and schedule deliveries</CardDescription>
+              <CardDescription>Requests you have approved - Operations team will handle supplier contact</CardDescription>
             </CardHeader>
             <CardContent>
               {approvedRequests.length === 0 ? (

@@ -28,14 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDialog';
+import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import { useToast } from '@/hooks/use-toast';
 
 // Status config remains the same
 const statusConfig = {
@@ -47,13 +49,17 @@ const statusConfig = {
 };
 
 // UPDATED: RequestRow to show all new info
-function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: {
+function RequestRow({ request, materialNameMap, vendorNameMap, vendors, onVerifyClick, onContactSupplier, onMarkAwaitingDelivery }: {
   request: MaterialRequest,
   materialNameMap: Record<string, string>,
   vendorNameMap: Record<string, string>,
+  vendors: Vendor[] | undefined,
   onVerifyClick: (request: MaterialRequest) => void;
+  onContactSupplier: (request: MaterialRequest, vendor: Vendor) => void;
+  onMarkAwaitingDelivery: (request: MaterialRequest) => void;
 }) {
   const status = statusConfig[request.status];
+  const vendor = vendors?.find(v => v.id === request.vendorId);
 
   return (
     <TableRow>
@@ -77,7 +83,21 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: 
       </TableCell>
       <TableCell className="text-right">
         <div className="flex gap-2 justify-end">
-          {/* Operations can only verify delivery when status is awaiting_delivery */}
+          {request.status === 'pending' && (
+            <span className="text-sm text-muted-foreground">Pending admin approval</span>
+          )}
+          {request.status === 'approved' && !request.supplierContacted && vendor && (
+            <Button variant="default" size="sm" onClick={() => onContactSupplier(request, vendor)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Contact Supplier
+            </Button>
+          )}
+          {request.status === 'approved' && request.supplierContacted && (
+            <Button variant="outline" size="sm" onClick={() => onMarkAwaitingDelivery(request)}>
+              <Truck className="mr-2 h-4 w-4" />
+              Schedule Delivery
+            </Button>
+          )}
           {request.status === 'awaiting_delivery' && (
             <Button variant="outline" size="sm" onClick={() => onVerifyClick(request)}>
               Verify Delivery
@@ -90,15 +110,6 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: 
                 View Note
               </a>
             </Button>
-          )}
-          {request.status === 'pending' && (
-            <span className="text-sm text-muted-foreground">Pending admin approval</span>
-          )}
-          {request.status === 'approved' && !request.supplierContacted && (
-            <span className="text-sm text-muted-foreground">Approved - awaiting supplier contact</span>
-          )}
-          {request.status === 'approved' && request.supplierContacted && (
-            <span className="text-sm text-muted-foreground">Supplier contacted - awaiting scheduling</span>
           )}
           {request.status === 'rejected' && (
             <span className="text-sm text-muted-foreground">Rejected by admin</span>
@@ -204,6 +215,56 @@ export default function RequestsPage() {
     return filtered;
   }, [materialRequests, searchTerm, vendorFilter, materialNameMap, vendorNameMap]);
 
+  const { toast } = useToast();
+
+  const handleContactSupplier = async (request: MaterialRequest, vendor: Vendor) => {
+    try {
+      const material = rawMaterials?.find(m => m.id === request.materialId);
+      if (!material) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Material not found.' });
+        return;
+      }
+
+      // Send email to supplier
+      await sendRequestEmail({
+        requestId: request.id,
+        materialName: material.name,
+        quantity: request.quantity,
+        requesterName: request.requestedByName,
+        vendorName: vendor.name,
+        vendorEmail: vendor.email,
+        requestUrl: `${window.location.origin}/operations/requests?requestId=${request.id}`,
+      });
+
+      // Update request to mark supplier as contacted
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, {
+        supplierContacted: true,
+        supplierContactedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ title: 'Supplier Contacted', description: `Email sent to ${vendor.name}` });
+    } catch (error) {
+      console.error('Failed to contact supplier:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to send email to supplier.' });
+    }
+  };
+
+  const handleMarkAwaitingDelivery = async (request: MaterialRequest) => {
+    try {
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, { 
+        status: 'awaiting_delivery',
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: 'Status Updated', description: 'Marked as awaiting delivery.' });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -285,7 +346,10 @@ export default function RequestsPage() {
                           request={req}
                           materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
+                          vendors={vendors || undefined}
                           onVerifyClick={setVerifyingRequest}
+                          onContactSupplier={handleContactSupplier}
+                          onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
                         />
                       ))
                     )}
@@ -327,7 +391,10 @@ export default function RequestsPage() {
                             request={req}
                             materialNameMap={materialNameMap}
                             vendorNameMap={vendorNameMap}
+                            vendors={vendors || undefined}
                             onVerifyClick={setVerifyingRequest}
+                            onContactSupplier={handleContactSupplier}
+                            onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
                           />
                         ))
                       )}
