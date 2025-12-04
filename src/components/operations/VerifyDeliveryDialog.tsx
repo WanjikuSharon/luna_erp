@@ -127,38 +127,28 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
       const secureUrl = uploadResult.secure_url;
       logger.info('File uploaded successfully:', secureUrl);
 
-      // 3. Update the Firestore document and inventory
+      // 3. Update the Firestore document - set to pending QC
       logger.debug('Updating Firestore document...');
       const requestDocRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
       
       await updateDoc(requestDocRef, {
-        status: 'delivered', // Update status
+        status: 'pending_qc', // Set to pending QC instead of delivered
         deliveryNoteUrl: secureUrl, // Save the new image URL
         updatedAt: serverTimestamp(),
       });
 
-      // 4. Update raw material inventory - increase stock automatically
-      logger.debug('Updating raw material inventory...');
-      const materialDocRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, request.materialId);
-      
-      // Get current quantity and add the delivered quantity
-      const { getDoc, increment } = await import('firebase/firestore');
-      const materialDoc = await getDoc(materialDocRef);
-      
-      if (materialDoc.exists()) {
-        await updateDoc(materialDocRef, {
-          quantity: increment(request.quantity), // Automatically add delivered quantity to stock
+      // NOTE: Stock will NOT be updated here anymore
+      // Production will perform QC and approve before stock is increased
           updatedAt: serverTimestamp(),
         });
         logger.info(`Inventory updated: Added ${request.quantity} ${request.unit} to stock`);
-      } else {
-        logger.warn('Material not found in inventory, stock not updated');
-      }
+      // NOTE: Stock will NOT be updated here anymore
+      // Production will perform QC and approve before stock is increased
 
-      // 5. Success!
+      // Success!
       toast({
         title: 'Delivery Verified!',
-        description: `Stock updated: +${request.quantity} ${request.unit}`,
+        description: 'Delivery note uploaded. Awaiting Production QC approval.',
       });
 
       // UPDATED: Log this action

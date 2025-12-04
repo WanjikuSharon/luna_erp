@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Mail, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -39,11 +39,14 @@ import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDial
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
 import { useToast } from '@/hooks/use-toast';
 
-// Status config remains the same
+// Status config with QC statuses
 const statusConfig = {
   pending: { label: 'Pending', icon: Clock },
   approved: { label: 'Approved', icon: CheckCircle },
   awaiting_delivery: { label: 'Awaiting Delivery', icon: Truck },
+  pending_qc: { label: 'Pending QC', icon: ClipboardCheck },
+  qc_approved: { label: 'QC Approved', icon: CheckCircle },
+  qc_rejected: { label: 'QC Rejected', icon: AlertTriangle },
   delivered: { label: 'Delivered', icon: FileCheck },
   rejected: { label: 'Rejected', icon: XCircle },
 };

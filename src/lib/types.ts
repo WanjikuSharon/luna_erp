@@ -83,12 +83,18 @@ export type MaterialRequest = {
   vendorId: string; // Added
   requestedBy: string;
   requestedByName: string; // Name of requester at time of request
-  status: 'pending' | 'approved' | 'awaiting_delivery' | 'delivered' | 'rejected';
+  status: 'pending' | 'approved' | 'awaiting_delivery' | 'pending_qc' | 'qc_approved' | 'qc_rejected' | 'delivered' | 'rejected';
   createdAt: any; // For Firestore Timestamp
   updatedAt: any; // For Firestore Timestamp
   deliveryNoteUrl?: string; // URL to the delivery note stored in Cloudinary
   supplierContacted?: boolean; // True when email sent to supplier
   supplierContactedAt?: any; // Timestamp when supplier was emailed
+  // QC Fields
+  qcPerformedBy?: string; // User ID who performed QC
+  qcPerformedByName?: string; // Name of QC performer
+  qcPerformedAt?: any; // Timestamp when QC was done
+  qcNotes?: string; // QC inspector notes
+  qcApproved?: boolean; // True if QC passed
 };
 
 export type Activity = {
