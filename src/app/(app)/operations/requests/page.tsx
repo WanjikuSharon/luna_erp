@@ -78,7 +78,7 @@ function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick, is
           {status.label}
         </Badge>
       </TableCell>
-      <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Vendor'}</TableCell> {/* Added vendor */}
+      <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Supplier'}</TableCell> {/* Added supplier */}
       <TableCell className="text-sm">{request.requestedByName || request.requestedBy || 'Unknown'}</TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
@@ -114,10 +114,10 @@ function RequestTableSkeleton() {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Material</TableHead>
+          <TableHead>Raw Material</TableHead>
           <TableHead className="text-center">Quantity</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Vendor</TableHead>
+          <TableHead>Supplier</TableHead>
           <TableHead>Requester</TableHead>
           <TableHead className="text-right">Created</TableHead>
           <TableHead className="w-[80px]"></TableHead>
@@ -270,16 +270,16 @@ export default function RequestsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Material Requests List</h1>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Raw Material Requests List</h1>
         <p className="text-muted-foreground">
-          Track and manage all raw material requests for production.
+          Track and manage all raw material requests from suppliers for production.
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Request History</CardTitle>
           <CardDescription>
-            Browse and filter all material requests.
+            Browse and filter all raw material requests.
           </CardDescription>
           {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
@@ -287,7 +287,7 @@ export default function RequestsPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search by material, vendor, or requester..."
+                placeholder="Search by raw material, supplier, or requester..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -295,10 +295,10 @@ export default function RequestsPage() {
             </div>
             <Select value={vendorFilter} onValueChange={setVendorFilter}>
               <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by vendor" />
+                <SelectValue placeholder="Filter by supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Vendors</SelectItem>
+                <SelectItem value="all">All Suppliers</SelectItem>
                 {(vendors ?? []).map(vendor => (
                   <SelectItem key={vendor.id} value={vendor.id}>
                     {vendor.name}
@@ -359,10 +359,10 @@ export default function RequestsPage() {
                           onCheckedChange={() => toggleSelectAll(filteredRequests)}
                         />
                       </TableHead>
-                      <TableHead>Material</TableHead>
+                      <TableHead>Raw Material</TableHead>
                       <TableHead className="text-center">Quantity & Unit</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Vendor</TableHead>
+                      <TableHead>Supplier</TableHead>
                       <TableHead>Requester</TableHead>
                       <TableHead className="text-right">Created</TableHead>
                       <TableHead className="w-[80px]"></TableHead>
@@ -374,7 +374,7 @@ export default function RequestsPage() {
                         <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           {searchTerm || vendorFilter !== 'all'
                             ? 'No requests match your filters'
-                            : 'No material requests found'}
+                            : 'No raw material requests found'}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -409,10 +409,10 @@ export default function RequestsPage() {
                             onCheckedChange={() => toggleSelectAll(statusRequests)}
                           />
                         </TableHead>
-                        <TableHead>Material</TableHead>
+                        <TableHead>Raw Material</TableHead>
                         <TableHead className="text-center">Quantity & Unit</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Vendor</TableHead>
+                        <TableHead>Supplier</TableHead>
                         <TableHead>Requester</TableHead>
                         <TableHead className="text-right">Created</TableHead>
                         <TableHead className="w-[80px]"></TableHead>
