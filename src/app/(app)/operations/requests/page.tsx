@@ -21,7 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -29,16 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Truck, FileCheck, Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { MaterialRequest, RawMaterial, Vendor } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { COLLECTIONS } from '@/services/inventory_service';
 import { VerifyDeliveryDialog } from '@/components/operations/VerifyDeliveryDialog';
-import { sendRequestEmail } from '@/ai/flows/send-request-email';
-import { useToast } from '@/hooks/use-toast';
 
 // Status config remains the same
 const statusConfig = {
@@ -50,38 +47,20 @@ const statusConfig = {
 };
 
 // UPDATED: RequestRow to show all new info
-function RequestRow({ request, materialNameMap, vendorNameMap, vendors, onVerifyClick, onApprove, onReject, onContactSupplier, onMarkAwaitingDelivery, isSelected, onToggleSelect }: {
+function RequestRow({ request, materialNameMap, vendorNameMap, onVerifyClick }: {
   request: MaterialRequest,
   materialNameMap: Record<string, string>,
   vendorNameMap: Record<string, string>,
-  vendors: Vendor[] | undefined,
   onVerifyClick: (request: MaterialRequest) => void;
-  onApprove: (request: MaterialRequest) => void;
-  onReject: (request: MaterialRequest) => void;
-  onContactSupplier: (request: MaterialRequest, vendor: Vendor) => void;
-  onMarkAwaitingDelivery: (request: MaterialRequest) => void;
-  isSelected?: boolean;
-  onToggleSelect?: (id: string) => void;
 }) {
-  // Display the user ID directly (or could be enhanced with a users collection lookup)
   const status = statusConfig[request.status];
-  const vendor = vendors?.find(v => v.id === request.vendorId);
 
   return (
     <TableRow>
-      {onToggleSelect && (
-        <TableCell>
-          <Checkbox
-            checked={isSelected || false}
-            onCheckedChange={() => onToggleSelect(request.id)}
-            disabled={request.status !== 'pending'}
-          />
-        </TableCell>
-      )}
       <TableCell>
         <div className="font-medium">{materialNameMap[request.materialId] || 'Unknown Material'}</div>
       </TableCell>
-      <TableCell className="text-center">{request.quantity} {request.unit}</TableCell> {/* Added unit */}
+      <TableCell className="text-center">{request.quantity} {request.unit}</TableCell>
       <TableCell>
         <Badge variant="secondary" className="font-normal">
           <status.icon className="mr-2 h-3.5 w-3.5" />
@@ -91,34 +70,14 @@ function RequestRow({ request, materialNameMap, vendorNameMap, vendors, onVerify
           <div className="text-xs text-muted-foreground mt-1">Supplier contacted</div>
         )}
       </TableCell>
-      <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Supplier'}</TableCell> {/* Added supplier */}
+      <TableCell>{vendorNameMap[request.vendorId] || 'Unknown Supplier'}</TableCell>
       <TableCell className="text-sm">{request.requestedByName || request.requestedBy || 'Unknown'}</TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {request.createdAt?.toDate ? formatDistanceToNow(request.createdAt.toDate(), { addSuffix: true }) : 'Processing...'}
       </TableCell>
-      {/* UPDATED: This cell now shows different buttons based on status */}
       <TableCell className="text-right">
         <div className="flex gap-2 justify-end">
-          {request.status === 'pending' && (
-            <>
-              <Button variant="default" size="sm" onClick={() => onApprove(request)}>
-                Approve
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => onReject(request)}>
-                Reject
-              </Button>
-            </>
-          )}
-          {request.status === 'approved' && !request.supplierContacted && vendor && (
-            <Button variant="default" size="sm" onClick={() => onContactSupplier(request, vendor)}>
-              Contact Supplier
-            </Button>
-          )}
-          {request.status === 'approved' && request.supplierContacted && (
-            <Button variant="outline" size="sm" onClick={() => onMarkAwaitingDelivery(request)}>
-              Mark Delivery Scheduled
-            </Button>
-          )}
+          {/* Operations can only verify delivery when status is awaiting_delivery */}
           {request.status === 'awaiting_delivery' && (
             <Button variant="outline" size="sm" onClick={() => onVerifyClick(request)}>
               Verify Delivery
@@ -132,8 +91,17 @@ function RequestRow({ request, materialNameMap, vendorNameMap, vendors, onVerify
               </a>
             </Button>
           )}
+          {request.status === 'pending' && (
+            <span className="text-sm text-muted-foreground">Pending admin approval</span>
+          )}
+          {request.status === 'approved' && !request.supplierContacted && (
+            <span className="text-sm text-muted-foreground">Approved - awaiting supplier contact</span>
+          )}
+          {request.status === 'approved' && request.supplierContacted && (
+            <span className="text-sm text-muted-foreground">Supplier contacted - awaiting scheduling</span>
+          )}
           {request.status === 'rejected' && (
-            <span className="text-sm text-muted-foreground">Rejected</span>
+            <span className="text-sm text-muted-foreground">Rejected by admin</span>
           )}
         </div>
       </TableCell>
@@ -177,13 +145,9 @@ export default function RequestsPage() {
   const allStatuses = Object.keys(statusConfig) as (keyof typeof statusConfig)[];
   const firestore = useFirestore();
 
-  // NEW: Add state to control the dialog
   const [verifyingRequest, setVerifyingRequest] = useState<MaterialRequest | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [vendorFilter, setVendorFilter] = useState<string>('all');
-  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
-  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
-  const [batchStatus, setBatchStatus] = useState<'approved' | 'rejected' | null>(null);
 
   // --- Data Fetching ---
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
@@ -240,151 +204,12 @@ export default function RequestsPage() {
     return filtered;
   }, [materialRequests, searchTerm, vendorFilter, materialNameMap, vendorNameMap]);
 
-  // Batch selection handlers
-  const toggleRequestSelection = (id: string) => {
-    setSelectedRequests(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleSelectAll = (requests: MaterialRequest[]) => {
-    const requestIds = requests.map(r => r.id);
-    if (selectedRequests.size === requestIds.length) {
-      setSelectedRequests(new Set());
-    } else {
-      setSelectedRequests(new Set(requestIds));
-    }
-  };
-
-  const clearSelection = () => {
-    setSelectedRequests(new Set());
-  };
-
-  // Batch status update
-  const handleBatchStatusUpdate = async (status: 'approved' | 'rejected') => {
-    if (selectedRequests.size === 0) return;
-    
-    setIsBatchUpdating(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    try {
-      const updatePromises = Array.from(selectedRequests).map(async (id) => {
-        try {
-          const docRef = doc(firestore, COLLECTIONS.REQUESTS, id);
-          await updateDoc(docRef, { status });
-          successCount++;
-        } catch (error) {
-          failCount++;
-          console.error(`Failed to update request ${id}:`, error);
-        }
-      });
-
-      await Promise.all(updatePromises);
-
-      // Success notification would go here
-      console.log(`Batch update complete: ${successCount} updated, ${failCount} failed`);
-      
-      clearSelection();
-    } catch (error) {
-      console.error('Batch update failed:', error);
-    } finally {
-      setIsBatchUpdating(false);
-      setBatchStatus(null);
-    }
-  };
-
-  // Individual request handlers
-  const { toast } = useToast();
-
-  const handleApprove = async (request: MaterialRequest) => {
-    try {
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, { 
-        status: 'approved',
-        updatedAt: serverTimestamp()
-      });
-      toast({ title: 'Request Approved', description: 'The request has been approved.' });
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to approve request.' });
-    }
-  };
-
-  const handleReject = async (request: MaterialRequest) => {
-    try {
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, { 
-        status: 'rejected',
-        updatedAt: serverTimestamp()
-      });
-      toast({ title: 'Request Rejected', description: 'The request has been rejected.' });
-    } catch (error) {
-      console.error('Failed to reject request:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to reject request.' });
-    }
-  };
-
-  const handleContactSupplier = async (request: MaterialRequest, vendor: Vendor) => {
-    try {
-      const material = rawMaterials?.find(m => m.id === request.materialId);
-      if (!material) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Material not found.' });
-        return;
-      }
-
-      // Send email to supplier
-      await sendRequestEmail({
-        requestId: request.id,
-        materialName: material.name,
-        quantity: request.quantity,
-        requesterName: request.requestedByName,
-        vendorName: vendor.name,
-        vendorEmail: vendor.email,
-        requestUrl: `${window.location.origin}/operations/requests?requestId=${request.id}`,
-      });
-
-      // Update request to mark supplier as contacted
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, {
-        supplierContacted: true,
-        supplierContactedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
-      toast({ title: 'Supplier Contacted', description: `Email sent to ${vendor.name}` });
-    } catch (error) {
-      console.error('Failed to contact supplier:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to send email to supplier.' });
-    }
-  };
-
-  const handleMarkAwaitingDelivery = async (request: MaterialRequest) => {
-    try {
-      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
-      await updateDoc(docRef, { 
-        status: 'awaiting_delivery',
-        updatedAt: serverTimestamp()
-      });
-      toast({ title: 'Status Updated', description: 'Marked as awaiting delivery.' });
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
-    }
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">Raw Material Requests List</h1>
         <p className="text-muted-foreground">
-          Track and manage all raw material requests from suppliers for production.
+          Track all raw material requests. Admins handle approvals and supplier contact. Operations verify deliveries.
         </p>
       </div>
       <Card>
@@ -465,25 +290,19 @@ export default function RequestsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40px]">
-                        <Checkbox
-                          checked={selectedRequests.size === filteredRequests.length && filteredRequests.length > 0}
-                          onCheckedChange={() => toggleSelectAll(filteredRequests)}
-                        />
-                      </TableHead>
                       <TableHead>Raw Material</TableHead>
                       <TableHead className="text-center">Quantity & Unit</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Supplier</TableHead>
                       <TableHead>Requester</TableHead>
                       <TableHead className="text-right">Created</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                      <TableHead className="w-[120px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRequests.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           {searchTerm || vendorFilter !== 'all'
                             ? 'No requests match your filters'
                             : 'No raw material requests found'}
@@ -496,14 +315,7 @@ export default function RequestsPage() {
                           request={req}
                           materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
-                          vendors={vendors || undefined}
                           onVerifyClick={setVerifyingRequest}
-                          onApprove={handleApprove}
-                          onReject={handleReject}
-                          onContactSupplier={handleContactSupplier}
-                          onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
-                          isSelected={selectedRequests.has(req.id)}
-                          onToggleSelect={toggleRequestSelection}
                         />
                       ))
                     )}
@@ -520,25 +332,19 @@ export default function RequestsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[40px]">
-                          <Checkbox
-                            checked={selectedRequests.size === statusRequests.length && statusRequests.length > 0}
-                            onCheckedChange={() => toggleSelectAll(statusRequests)}
-                          />
-                        </TableHead>
                         <TableHead>Raw Material</TableHead>
                         <TableHead className="text-center">Quantity & Unit</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Requester</TableHead>
                         <TableHead className="text-right">Created</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
+                        <TableHead className="w-[120px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {statusRequests.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                             {searchTerm || vendorFilter !== 'all'
                               ? `No ${statusConfig[status].label.toLowerCase()} requests match your filters`
                               : `No ${statusConfig[status].label.toLowerCase()} requests`}
@@ -551,14 +357,7 @@ export default function RequestsPage() {
                             request={req}
                             materialNameMap={materialNameMap}
                             vendorNameMap={vendorNameMap}
-                            vendors={vendors || undefined}
                             onVerifyClick={setVerifyingRequest}
-                            onApprove={handleApprove}
-                            onReject={handleReject}
-                            onContactSupplier={handleContactSupplier}
-                            onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
-                            isSelected={selectedRequests.has(req.id)}
-                            onToggleSelect={toggleRequestSelection}
                           />
                         ))
                       )}
