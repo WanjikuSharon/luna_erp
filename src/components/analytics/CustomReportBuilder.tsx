@@ -56,8 +56,8 @@ const REPORT_FIELDS: Record<ReportType, ReportField[]> = {
     { id: 'supervisorName', label: 'Supervisor', type: 'string' },
   ],
   operations: [
-    { id: 'materialId', label: 'Material', type: 'string' },
-    { id: 'vendorId', label: 'Vendor', type: 'string' },
+    { id: 'materialId', label: 'Raw Material', type: 'string' },
+    { id: 'vendorId', label: 'Supplier', type: 'string' },
     { id: 'quantity', label: 'Quantity', type: 'number' },
     { id: 'status', label: 'Status', type: 'string' },
     { id: 'requestedByName', label: 'Requested By', type: 'string' },
