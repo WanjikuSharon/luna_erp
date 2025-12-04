@@ -220,19 +220,12 @@ export default function VendorsAndMaterialsPage() {
       // UPDATED: Log this action
       await logOperationActivity(`created a new delivery request for ${data.quantity} ${data.unit} of ${material?.name || 'material'}.`);
 
-      toast({ title: "Delivery Request Sent", description: "Your request has been logged." });
+      toast({ title: "Delivery Request Created", description: "Your request is pending approval." });
       requestForm.reset();
       setIsRequestDialogOpen(false);
-      sendRequestEmail({
-          requestId: newRequestId,
-          materialName: material.name,
-          quantity: data.quantity,
-          requesterName: userName,
-          vendorName: vendor.name,
-          requestUrl: `${window.location.origin}/operations/requests?requestId=${newRequestId}`,
-      }).catch(flowError => {
-          logger.error("Error invoking sendRequestEmail flow:", flowError);
-      });
+      
+      // EMAIL REMOVED - Will be sent when admin approves the request
+      
     } catch (error) {
       const appError = handleError(error, 'onSubmitRequest');
       toast({ 
