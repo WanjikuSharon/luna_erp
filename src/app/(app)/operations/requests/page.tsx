@@ -300,6 +300,84 @@ export default function RequestsPage() {
     }
   };
 
+  // Individual request handlers
+  const { toast } = useToast();
+
+  const handleApprove = async (request: MaterialRequest) => {
+    try {
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, { 
+        status: 'approved',
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: 'Request Approved', description: 'The request has been approved.' });
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to approve request.' });
+    }
+  };
+
+  const handleReject = async (request: MaterialRequest) => {
+    try {
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, { 
+        status: 'rejected',
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: 'Request Rejected', description: 'The request has been rejected.' });
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to reject request.' });
+    }
+  };
+
+  const handleContactSupplier = async (request: MaterialRequest, vendor: Vendor) => {
+    try {
+      const material = rawMaterials?.find(m => m.id === request.materialId);
+      if (!material) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Material not found.' });
+        return;
+      }
+
+      // Send email to supplier
+      await sendRequestEmail({
+        requestId: request.id,
+        materialName: material.name,
+        quantity: request.quantity,
+        requesterName: request.requestedByName,
+        vendorName: vendor.name,
+        requestUrl: `${window.location.origin}/operations/requests?requestId=${request.id}`,
+      });
+
+      // Update request to mark supplier as contacted
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, {
+        supplierContacted: true,
+        supplierContactedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ title: 'Supplier Contacted', description: `Email sent to ${vendor.name}` });
+    } catch (error) {
+      console.error('Failed to contact supplier:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to send email to supplier.' });
+    }
+  };
+
+  const handleMarkAwaitingDelivery = async (request: MaterialRequest) => {
+    try {
+      const docRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
+      await updateDoc(docRef, { 
+        status: 'awaiting_delivery',
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: 'Status Updated', description: 'Marked as awaiting delivery.' });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -417,7 +495,12 @@ export default function RequestsPage() {
                           request={req}
                           materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
+                          vendors={vendors}
                           onVerifyClick={setVerifyingRequest}
+                          onApprove={handleApprove}
+                          onReject={handleReject}
+                          onContactSupplier={handleContactSupplier}
+                          onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
                           isSelected={selectedRequests.has(req.id)}
                           onToggleSelect={toggleRequestSelection}
                         />
@@ -467,7 +550,12 @@ export default function RequestsPage() {
                             request={req}
                             materialNameMap={materialNameMap}
                             vendorNameMap={vendorNameMap}
+                            vendors={vendors}
                             onVerifyClick={setVerifyingRequest}
+                            onApprove={handleApprove}
+                            onReject={handleReject}
+                            onContactSupplier={handleContactSupplier}
+                            onMarkAwaitingDelivery={handleMarkAwaitingDelivery}
                             isSelected={selectedRequests.has(req.id)}
                             onToggleSelect={toggleRequestSelection}
                           />
