@@ -71,15 +71,3 @@ export async function verifyConnection() {
     return false;
   }
 }
-
-    const result = await response.json();
-    logger.info('ZeptoMail API Response:', result);
-    // You might want to check the specific structure of ZeptoMail's success response
-    // For now, we assume a 2xx status means success
-    return true;
-
-  } catch (error) {
-    logger.error('Error sending email:', error);
-    return false;
-  }
-}
