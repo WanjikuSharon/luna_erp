@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ClipboardList, Package, PackageSearch, Recycle } from 'lucide-react'; // Import icons
+import { LayoutDashboard, ClipboardList, Package, PackageSearch, Recycle, Warehouse } from 'lucide-react'; // Import icons
 
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,11 @@ const sidebarNavItems = [
     title: 'Overview',
     href: '/operations/overview',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Raw Materials Stock',
+    href: '/operations/raw-materials',
+    icon: Warehouse,
   },
   {
     title: 'Raw Materials Suppliers', // UPDATED
