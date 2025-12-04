@@ -81,8 +81,23 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
     try {
       // 1. Get the secure signature from our Genkit flow
       logger.debug('Requesting upload signature...');
-      const sigResponse = await generateUploadSignature({});
-      if (!sigResponse) throw new Error('Failed to get upload signature.');
+      
+      let sigResponse;
+      try {
+        sigResponse = await generateUploadSignature({});
+      } catch (flowError: any) {
+        logger.error('Upload signature generation failed:', flowError);
+        throw new Error(`Signature generation failed: ${flowError.message || 'Unknown error'}`);
+      }
+      
+      if (!sigResponse) {
+        throw new Error('Failed to get upload signature - no response received.');
+      }
+      
+      logger.debug('Signature received:', { 
+        cloud_name: sigResponse.cloud_name, 
+        timestamp: sigResponse.timestamp 
+      });
 
       // 2. Create FormData and upload to Cloudinary
       logger.debug('Uploading file to Cloudinary...');
@@ -96,18 +111,21 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${sigResponse.cloud_name}/image/upload`;
       
+      logger.debug('Uploading to URL:', uploadUrl);
       const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('Cloudinary upload failed.');
+        const errorText = await uploadResponse.text();
+        logger.error('Cloudinary upload failed:', errorText);
+        throw new Error(`Cloudinary upload failed: ${uploadResponse.status} ${errorText}`);
       }
 
       const uploadResult = await uploadResponse.json();
       const secureUrl = uploadResult.secure_url;
-      logger.info('File uploaded:', secureUrl);
+      logger.info('File uploaded successfully:', secureUrl);
 
       // 3. Update the Firestore document
       logger.debug('Updating Firestore document...');
