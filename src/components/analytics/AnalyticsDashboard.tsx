@@ -504,8 +504,8 @@ export function AnalyticsDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Top Vendors</CardTitle>
-                <CardDescription>Requests by vendor</CardDescription>
+                <CardTitle>Top Suppliers</CardTitle>
+                <CardDescription>Requests by supplier</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
