@@ -1,53 +1,76 @@
 // src/services/email_service.ts
-'use server'; // Mark this module for server-side execution if needed by flows
+'use server';
 
+import nodemailer from 'nodemailer';
 import { createLogger } from '@/lib/logger';
 import { env } from '@/lib/env';
 
 const logger = createLogger('EmailService');
 
-// Define the structure of the email data
+/**
+ * Configure HostPinnacle SMTP Transporter
+ */
+const transporter = nodemailer.createTransport({
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  secure: env.SMTP_PORT === 465, // TRUE for port 465 (SSL), FALSE for 587 (TLS)
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASSWORD,
+  },
+});
+
+// Define the structure of the email data (keeping compatibility with existing code)
 interface SendEmailParams {
   to: { email_address: { address: string; name?: string } }[];
   subject: string;
-  htmlbody: string; // ZeptoMail uses htmlbody for HTML content
-  from: { address: string; name?: string };
+  htmlbody: string;
+  from?: { address: string; name?: string };
 }
 
-// ZeptoMail API endpoint
-const ZEPTOMAIL_API_URL = 'https://api.zeptomail.com/v1.1/email';
-
 /**
- * Sends an email using the ZeptoMail API.
+ * Sends an email using HostPinnacle SMTP.
  * @param {SendEmailParams} params - Email parameters including recipients, subject, body, and sender.
- * @returns {Promise<boolean>} - True if the email was sent successfully (based on API response), false otherwise.
+ * @returns {Promise<boolean>} - True if the email was sent successfully, false otherwise.
  */
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {
-  // Use validated environment variable
-  const apiKey = env.ZEPTOMAIL_API_KEY;
-
-  // Ensure the bounce address is set
-  const payload = {
-    ...params,
-    bounce_address: 'delivery@luna.co.ke', // As requested
-  };
-
   try {
-    const response = await fetch(ZEPTOMAIL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': apiKey, // API key includes the prefix
-      },
-      body: JSON.stringify(payload),
+    // Convert recipients array to comma-separated string
+    const recipients = params.to.map(r => 
+      r.email_address.name 
+        ? `"${r.email_address.name}" <${r.email_address.address}>`
+        : r.email_address.address
+    ).join(', ');
+
+    const info = await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to: recipients,
+      subject: params.subject,
+      html: params.htmlbody,
+      text: params.htmlbody.replace(/<[^>]*>?/gm, ''), // Auto-generate plain text from HTML
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      logger.error(`Failed to send email via ZeptoMail. Status: ${response.status}`, errorBody);
-      return false;
-    }
+    logger.info(`📧 Email sent successfully to ${recipients} (ID: ${info.messageId})`);
+    return true;
+  } catch (error: any) {
+    logger.error('❌ Failed to send email via SMTP:', error);
+    return false;
+  }
+}
+
+/**
+ * Verify SMTP connection on startup (optional - for testing)
+ */
+export async function verifyConnection() {
+  try {
+    await transporter.verify();
+    logger.info(`✅ Connected to SMTP Server: ${env.SMTP_HOST}:${env.SMTP_PORT}`);
+    return true;
+  } catch (error) {
+    logger.error('❌ SMTP Connection failed:', error);
+    return false;
+  }
+}
 
     const result = await response.json();
     logger.info('ZeptoMail API Response:', result);

@@ -32,8 +32,12 @@ const envSchema = z.object({
   NEXT_PUBLIC_CLOUDINARY_API_KEY: z.string().min(1, 'Cloudinary API key is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'Cloudinary API secret is required (server-side only)'),
   
-  // Email Service (ZeptoMail)
-  ZEPTOMAIL_API_KEY: z.string().min(1, 'ZeptoMail API key is required'),
+  // HostPinnacle SMTP Configuration
+  SMTP_HOST: z.string().min(1, 'SMTP Host is required'),
+  SMTP_PORT: z.coerce.number().int().positive(),
+  SMTP_USER: z.string().min(1, 'SMTP User is required'),
+  SMTP_PASSWORD: z.string().min(1, 'SMTP Password is required'),
+  SMTP_FROM: z.string().optional().default('Luna Industries <wanjiku@luna.co.ke>'),
   
   // KRA eTIMS Configuration (Optional - only needed for tax invoicing)
   ETIMS_API_KEY: z.string().optional(),
@@ -86,7 +90,11 @@ function validateEnv(): Env {
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '',
       NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '',
       CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
-      ZEPTOMAIL_API_KEY: process.env.ZEPTOMAIL_API_KEY || '',
+      SMTP_HOST: process.env.SMTP_HOST || '',
+      SMTP_PORT: Number(process.env.SMTP_PORT) || 465,
+      SMTP_USER: process.env.SMTP_USER || '',
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD || '',
+      SMTP_FROM: process.env.SMTP_FROM || 'Luna Industries <wanjiku@luna.co.ke>',
       ETIMS_API_KEY: process.env.ETIMS_API_KEY,
       ETIMS_API_SECRET: process.env.ETIMS_API_SECRET,
       ETIMS_DEVICE_SERIAL: process.env.ETIMS_DEVICE_SERIAL,
