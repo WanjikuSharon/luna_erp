@@ -25,23 +25,39 @@ admin.initializeApp({
 const db = admin.firestore();
 
 async function importProducts() {
-  console.log(`Starting import for ${data.length} products into '${COLLECTION_NAME}' collection...`);
+  console.log(`Starting sync for ${data.length} products...`);
 
-  // A batch write can only do 500 operations.
-  // We'll do them one by one, which is safer for a small list.
   for (const product of data) {
     try {
-      // Using .add() will create a new document with an auto-generated ID
-      // and add all the fields from your JSON object.
-      await db.collection(COLLECTION_NAME).add(product);
-      console.log(`  > Added: ${product.name}`);
+      // Check if product exists by SKU
+      const snapshot = await db.collection(COLLECTION_NAME)
+        .where('sku', '==', product.sku)
+        .limit(1)
+        .get();
+
+      if (!snapshot.empty) {
+        // UPDATE existing product (Update price/name, keep inventory safe)
+        const docId = snapshot.docs[0].id;
+        await db.collection(COLLECTION_NAME).doc(docId).update({
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          packSize: product.packSize
+          // NOTE: We do NOT update quantity here to avoid overwriting live stock
+        });
+        console.log(`  ↻ Updated: ${product.name}`);
+      } else {
+        // CREATE new product
+        await db.collection(COLLECTION_NAME).add(product);
+        console.log(`  + Created: ${product.name}`);
+      }
     } catch (error) {
-      console.error(`  ! FAILED to add: ${product.name}`, error);
+      console.error(`  ! FAILED: ${product.name}`, error);
     }
   }
   
   console.log('---------------------');
-  console.log('✅ Product import complete!');
+  console.log('✅ Product sync complete!');
 }
 
 importProducts();
