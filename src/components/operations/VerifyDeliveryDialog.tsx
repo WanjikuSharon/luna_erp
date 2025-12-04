@@ -139,11 +139,6 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
 
       // NOTE: Stock will NOT be updated here anymore
       // Production will perform QC and approve before stock is increased
-          updatedAt: serverTimestamp(),
-        });
-        logger.info(`Inventory updated: Added ${request.quantity} ${request.unit} to stock`);
-      // NOTE: Stock will NOT be updated here anymore
-      // Production will perform QC and approve before stock is increased
 
       // Success!
       toast({
