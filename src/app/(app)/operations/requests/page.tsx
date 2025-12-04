@@ -346,6 +346,7 @@ export default function RequestsPage() {
         quantity: request.quantity,
         requesterName: request.requestedByName,
         vendorName: vendor.name,
+        vendorEmail: vendor.email,
         requestUrl: `${window.location.origin}/operations/requests?requestId=${request.id}`,
       });
 

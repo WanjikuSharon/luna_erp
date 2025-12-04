@@ -15,6 +15,7 @@ const SendRequestEmailInputSchema = z.object({
   quantity: z.number().describe("Quantity requested."),
   requesterName: z.string().describe("Name of the person who made the request."),
   vendorName: z.string().describe("Name of the vendor selected."),
+  vendorEmail: z.string().describe("Email address of the vendor."),
   requestUrl: z.string().optional().describe("A direct link to view the request in the ERP (optional)."),
 });
 
@@ -27,28 +28,42 @@ const sendRequestEmailFlow = ai.defineFlow(
   async requestDetails => {
     logger.debug('sendRequestEmail flow triggered for request:', requestDetails.requestId);
 
-    // Format the email content
-    const subject = `New Material Request Submitted: ${requestDetails.materialName}`;
+    // Format the email content for the vendor
+    const subject = `Material Request from Luna Industries: ${requestDetails.materialName}`;
     const body = `
-      <h1>New Material Request</h1>
-      <p>A new request for raw materials has been submitted:</p>
+      <h1>Material Request</h1>
+      <p>Dear ${requestDetails.vendorName},</p>
+      <p>We would like to place an order for the following material:</p>
       <ul>
         <li><strong>Material:</strong> ${requestDetails.materialName}</li>
         <li><strong>Quantity:</strong> ${requestDetails.quantity}</li>
-        <li><strong>Vendor:</strong> ${requestDetails.vendorName}</li>
-        <li><strong>Requested By:</strong> ${requestDetails.requesterName}</li>
+        <li><strong>Request ID:</strong> ${requestDetails.requestId}</li>
       </ul>
-      ${requestDetails.requestUrl ? `<p><a href="${requestDetails.requestUrl}">View Request Details</a></p>` : ''}
-      <p>Please review and approve/reject this request in the Luna ERP system.</p>
+      <p>Please confirm availability and delivery timeline at your earliest convenience.</p>
+      <p>Best regards,<br>
+      ${requestDetails.requesterName}<br>
+      Luna Industries</p>
     `;
 
     try {
-      // Call the notifyAdmins flow
-      const result = await notifyAdmins({ subject, body });
-      logger.info('notifyAdmins result:', result);
-      return { success: result.success };
+      // Import and use the sendEmail function directly to send to vendor
+      const { sendEmail } = await import('@/services/email_service');
+      
+      const result = await sendEmail({
+        to: [{
+          email_address: {
+            address: requestDetails.vendorEmail,
+            name: requestDetails.vendorName
+          }
+        }],
+        subject,
+        htmlbody: body
+      });
+      
+      logger.info(`Email sent to vendor ${requestDetails.vendorName} (${requestDetails.vendorEmail}):`, result);
+      return { success: result };
     } catch (error) {
-      logger.error('Error calling notifyAdmins flow:', error);
+      logger.error('Error sending email to vendor:', error);
       return { success: false };
     }
   }
