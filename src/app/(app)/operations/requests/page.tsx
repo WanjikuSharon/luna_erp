@@ -244,36 +244,6 @@ export default function RequestsPage() {
               </SelectContent>
             </Select>
           </div>
-          {/* Batch Actions */}
-          {selectedRequests.size > 0 && (
-            <div className="flex items-center gap-2 mt-3 p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">
-                {selectedRequests.size} request{selectedRequests.size > 1 ? 's' : ''} selected
-              </p>
-              <div className="flex gap-2 ml-auto">
-                <Button variant="outline" size="sm" onClick={clearSelection}>
-                  Clear
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => handleBatchStatusUpdate('approved')}
-                  disabled={isBatchUpdating}
-                >
-                  {isBatchUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Approve Selected
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => handleBatchStatusUpdate('rejected')}
-                  disabled={isBatchUpdating}
-                >
-                  Reject Selected
-                </Button>
-              </div>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all">
