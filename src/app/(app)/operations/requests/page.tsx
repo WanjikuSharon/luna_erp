@@ -495,7 +495,7 @@ export default function RequestsPage() {
                           request={req}
                           materialNameMap={materialNameMap}
                           vendorNameMap={vendorNameMap}
-                          vendors={vendors}
+                          vendors={vendors || undefined}
                           onVerifyClick={setVerifyingRequest}
                           onApprove={handleApprove}
                           onReject={handleReject}
