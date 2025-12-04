@@ -15,7 +15,7 @@ const sidebarNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Vendors & Materials', // NEW
+    title: 'Raw Materials Suppliers', // UPDATED
     href: '/operations/inventory',
     icon: PackageSearch, // Use a more fitting icon
   },
