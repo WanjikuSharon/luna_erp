@@ -79,6 +79,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import type { RawMaterial, Vendor } from '@/lib/types'; 
 import { COLLECTIONS } from '@/services/inventory_service';
 import { sendRequestEmail } from '@/ai/flows/send-request-email';
+import { notifyAdmins } from '@/ai/flows/notify-admins';
 import { handleError, getErrorMessage } from '@/lib/error-handler';
 import { logActivity } from '@/services/activity_logger';
 
@@ -224,7 +225,28 @@ export default function VendorsAndMaterialsPage() {
       requestForm.reset();
       setIsRequestDialogOpen(false);
       
-      // EMAIL REMOVED - Will be sent when admin approves the request
+      // Notify admins about the new request
+      try {
+        await notifyAdmins({
+          subject: `New Material Request Pending Approval - ${material.name}`,
+          body: `
+            <h1>New Material Request Requires Approval</h1>
+            <p>A new material request has been submitted and is awaiting admin approval:</p>
+            <ul>
+              <li><strong>Material:</strong> ${material.name}</li>
+              <li><strong>Quantity:</strong> ${data.quantity} ${data.unit}</li>
+              <li><strong>Vendor:</strong> ${vendor.name}</li>
+              <li><strong>Requested By:</strong> ${userName}</li>
+              <li><strong>Request ID:</strong> ${newRequestId}</li>
+            </ul>
+            <p><a href="${typeof window !== 'undefined' ? window.location.origin : ''}/operations/requests">View and Approve Request</a></p>
+            <p>Please review and approve/reject this request in the Luna ERP system.</p>
+          `
+        });
+      } catch (emailError) {
+        console.error('Failed to notify admins:', emailError);
+        // Don't fail the request creation if email fails
+      }
       
     } catch (error) {
       const appError = handleError(error, 'onSubmitRequest');
