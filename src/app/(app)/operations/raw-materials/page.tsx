@@ -123,7 +123,7 @@ export default function RawMaterialsInventoryPage() {
     return rawMaterials.filter(
       (material) =>
         material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.category?.toLowerCase().includes(searchTerm.toLowerCase())
+        material.sku.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [rawMaterials, searchTerm]);
 
@@ -151,9 +151,7 @@ export default function RawMaterialsInventoryPage() {
       <TableRow>
         <TableCell>
           <div className="font-medium">{material.name}</div>
-          {material.category && (
-            <div className="text-xs text-muted-foreground">{material.category}</div>
-          )}
+          <div className="text-xs text-muted-foreground">SKU: {material.sku}</div>
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-3">
