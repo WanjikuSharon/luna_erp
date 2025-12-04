@@ -1,40 +1,54 @@
 [
-{ "name": "Dishwash - Citrus Bloom (500ml)", "sku": "LUN-DW-CIT-500", "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
-{ "name": "Dishwash - Fruity Orange (500ml)", "sku": "LUN-DW-FRU-500", "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
-{ "name": "Dishwash - Lime Glow (500ml)", "sku": "LUN-DW-LIM-500", "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
+  { "name": "Dishwash - Citrus Bloom (500ml)", "sku": "LUN-DW-CIT-500", "price": 95, "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
+  { "name": "Dishwash - Fruity Orange (500ml)", "sku": "LUN-DW-FRU-500", "price": 95, "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
+  { "name": "Dishwash - Lime Glow (500ml)", "sku": "LUN-DW-LIM-500", "price": 95, "quantity": 0, "unit": "units", "category": "Dishwash", "packSize": 6 },
 
-{ "name": "Fabric Softener - Lavender (750ml)", "sku": "LUN-FS-LAV-750", "quantity": 0, "unit": "units", "category": "Fabric Softener", "packSize": 6 },
-{ "name": "Fabric Softener - Apricot Peach (750ml)", "sku": "LUN-FS-APR-750", "quantity": 0, "unit": "units", "category": "Fabric Softener", "packSize": 6 },
+  { "name": "Fabric Softener - Cool Lavender (750ml)", "sku": "LUN-FS-LAV-750", "price": 185, "quantity": 0, "unit": "units", "category": "Fabric Softener", "packSize": 6 },
+  { "name": "Fabric Softener - Apricot Luxe (750ml)", "sku": "LUN-FS-APR-750", "price": 185, "quantity": 0, "unit": "units", "category": "Fabric Softener", "packSize": 6 },
 
-{ "name": "Shower Gel - Mango (400ml)", "sku": "LUN-SG-MAN-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Mango (500ml)", "sku": "LUN-SG-MAN-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Mango (800ml)", "sku": "LUN-SG-MAN-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Juicy Mango (400ml)", "sku": "LUN-SG-MAN-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Juicy Mango (500ml)", "sku": "LUN-SG-MAN-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Juicy Mango (800ml)", "sku": "LUN-SG-MAN-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Vanilla (400ml)", "sku": "LUN-SG-VAN-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Vanilla (500ml)", "sku": "LUN-SG-VAN-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Vanilla (800ml)", "sku": "LUN-SG-VAN-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Creamy Vanilla (400ml)", "sku": "LUN-SG-VAN-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Creamy Vanilla (500ml)", "sku": "LUN-SG-VAN-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Creamy Vanilla (800ml)", "sku": "LUN-SG-VAN-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Lime (400ml)", "sku": "LUN-SG-LIM-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Lime (500ml)", "sku": "LUN-SG-LIM-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Lime (800ml)", "sku": "LUN-SG-LIM-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zingy Lime (400ml)", "sku": "LUN-SG-LIM-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zingy Lime (500ml)", "sku": "LUN-SG-LIM-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zingy Lime (800ml)", "sku": "LUN-SG-LIM-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Mint (400ml)", "sku": "LUN-SG-MIN-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Mint (500ml)", "sku": "LUN-SG-MIN-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Mint (800ml)", "sku": "LUN-SG-MIN-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Tingly Mint (400ml)", "sku": "LUN-SG-MIN-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Tingly Mint (500ml)", "sku": "LUN-SG-MIN-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Tingly Mint (800ml)", "sku": "LUN-SG-MIN-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Lemon (400ml)", "sku": "LUN-SG-LEM-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Lemon (500ml)", "sku": "LUN-SG-LEM-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Lemon (800ml)", "sku": "LUN-SG-LEM-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zesty Lemon (400ml)", "sku": "LUN-SG-LEM-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zesty Lemon (500ml)", "sku": "LUN-SG-LEM-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Zesty Lemon (800ml)", "sku": "LUN-SG-LEM-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Raspberry (400ml)", "sku": "LUN-SG-RAS-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Raspberry (500ml)", "sku": "LUN-SG-RAS-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Raspberry (800ml)", "sku": "LUN-SG-RAS-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Sweet Raspberry (400ml)", "sku": "LUN-SG-RAS-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Sweet Raspberry (500ml)", "sku": "LUN-SG-RAS-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Sweet Raspberry (800ml)", "sku": "LUN-SG-RAS-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Ocean Breeze (400ml)", "sku": "LUN-SG-OCB-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Ocean Breeze (500ml)", "sku": "LUN-SG-OCB-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Ocean Breeze (800ml)", "sku": "LUN-SG-OCB-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Ocean Breeze (400ml)", "sku": "LUN-SG-OCB-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Ocean Breeze (500ml)", "sku": "LUN-SG-OCB-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Ocean Breeze (800ml)", "sku": "LUN-SG-OCB-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
 
-{ "name": "Shower Gel - Cocoa Butter (400ml)", "sku": "LUN-SG-COC-400", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Cocoa Butter (500ml)", "sku": "LUN-SG-COC-500", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
-{ "name": "Shower Gel - Cocoa Butter (800ml)", "sku": "LUN-SG-COC-800", "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 }
+  { "name": "Shower Gel - Cocoa Butter (400ml)", "sku": "LUN-SG-COC-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Cocoa Butter (500ml)", "sku": "LUN-SG-COC-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Cocoa Butter (800ml)", "sku": "LUN-SG-COC-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+
+  { "name": "Shower Gel - Lavender (400ml)", "sku": "LUN-SG-LAV-400", "price": 180, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Lavender (500ml)", "sku": "LUN-SG-LAV-500", "price": 220, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+  { "name": "Shower Gel - Lavender (800ml)", "sku": "LUN-SG-LAV-800", "price": 250, "quantity": 0, "unit": "units", "category": "Shower Gel", "packSize": 6 },
+
+  { "name": "Multi-Purpose Soap (5L)", "sku": "LUN-MP-GEN-5000", "price": 0, "quantity": 0, "unit": "units", "category": "General", "packSize": 1 },
+  { "name": "Antiseptic Liquid (125ml)", "sku": "LUN-ANT-LIQ-125", "price": 0, "quantity": 0, "unit": "units", "category": "Antiseptic", "packSize": 1 },
+  { "name": "Sulphonamide Antiseptic (125ml)", "sku": "LUN-ANT-SUL-125", "price": 0, "quantity": 0, "unit": "units", "category": "Antiseptic", "packSize": 1 },
+  { "name": "Hair Conditioner (1L)", "sku": "LUN-HC-GEN-1000", "price": 0, "quantity": 0, "unit": "units", "category": "Hair Care", "packSize": 1 },
+  { "name": "Hair Shampoo (1L)", "sku": "LUN-HS-GEN-1000", "price": 0, "quantity": 0, "unit": "units", "category": "Hair Care", "packSize": 1 },
+  { "name": "Hair Leave-In Conditioner (500ml)", "sku": "LUN-HLI-GEN-500", "price": 0, "quantity": 0, "unit": "units", "category": "Hair Care", "packSize": 1 },
+  { "name": "Face Scrub (500ml)", "sku": "LUN-FSC-GEN-500", "price": 0, "quantity": 0, "unit": "units", "category": "Skin Care", "packSize": 1 },
+  { "name": "Body Scrub (500ml)", "sku": "LUN-BSC-GEN-500", "price": 0, "quantity": 0, "unit": "units", "category": "Skin Care", "packSize": 1 },
+  { "name": "Handwash Soap (500ml)", "sku": "LUN-HW-GEN-500", "price": 0, "quantity": 0, "unit": "units", "category": "Handwash", "packSize": 1 }
 ]
