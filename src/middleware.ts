@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'", // unsafe-inline for Tailwind
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.cloudfunctions.net",
+    "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.cloudfunctions.net https://api.cloudinary.com https://res.cloudinary.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
