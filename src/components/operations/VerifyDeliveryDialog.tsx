@@ -127,7 +127,7 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
       const secureUrl = uploadResult.secure_url;
       logger.info('File uploaded successfully:', secureUrl);
 
-      // 3. Update the Firestore document
+      // 3. Update the Firestore document and inventory
       logger.debug('Updating Firestore document...');
       const requestDocRef = doc(firestore, COLLECTIONS.REQUESTS, request.id);
       
@@ -137,10 +137,28 @@ export function VerifyDeliveryDialog({ request, onOpenChange }: VerifyDeliveryDi
         updatedAt: serverTimestamp(),
       });
 
-      // 4. Success!
+      // 4. Update raw material inventory - increase stock automatically
+      logger.debug('Updating raw material inventory...');
+      const materialDocRef = doc(firestore, COLLECTIONS.RAW_MATERIALS, request.materialId);
+      
+      // Get current quantity and add the delivered quantity
+      const { getDoc, increment } = await import('firebase/firestore');
+      const materialDoc = await getDoc(materialDocRef);
+      
+      if (materialDoc.exists()) {
+        await updateDoc(materialDocRef, {
+          quantity: increment(request.quantity), // Automatically add delivered quantity to stock
+          updatedAt: serverTimestamp(),
+        });
+        logger.info(`Inventory updated: Added ${request.quantity} ${request.unit} to stock`);
+      } else {
+        logger.warn('Material not found in inventory, stock not updated');
+      }
+
+      // 5. Success!
       toast({
         title: 'Delivery Verified!',
-        description: 'The request status has been updated to "Delivered".',
+        description: `Stock updated: +${request.quantity} ${request.unit}`,
       });
 
       // UPDATED: Log this action
