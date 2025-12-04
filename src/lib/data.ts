@@ -35,9 +35,9 @@ export const rawMaterials: RawMaterial[] = [
 ];
 
 export const products: Product[] = [
-  { id: 'prod-1', name: 'Handcarved Bowl', sku: 'LUN-PROD-BWL-01', quantity: 120, unit: 'units' },
-  { id: 'prod-2', name: 'Brass Earrings', sku: 'LUN-PROD-JWL-02', quantity: 300, unit: 'units' },
-  { id: 'prod-3', 'name': 'Cotton Tote Bag', sku: 'LUN-PROD-BAG-03', quantity: 500, unit: 'units' },
+  { id: 'prod-1', name: 'Handcarved Bowl', sku: 'LUN-PROD-BWL-01', quantity: 120, unit: 'units', price: 0 },
+  { id: 'prod-2', name: 'Brass Earrings', sku: 'LUN-PROD-JWL-02', quantity: 300, unit: 'units', price: 0 },
+  { id: 'prod-3', name: 'Cotton Tote Bag', sku: 'LUN-PROD-BAG-03', quantity: 500, unit: 'units', price: 0 },
 ];
 
 export const materialRequests: MaterialRequest[] = [
