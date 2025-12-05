@@ -504,10 +504,10 @@ export default function LogProductionPage() {
                    <CardDescription>
                       Log all quality control checks for the final product.
                    </CardDescription>
-                        <div className="space-y-6">
-                          <div className="border p-4 rounded-md space-y-4">
-                            <h4 className="font-semibold">Label Details & Yield</h4>
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   <div className="space-y-6">
+                     <div className="border p-4 rounded-md space-y-4">
+                       <h4 className="font-semibold">Label Details & Yield</h4>
+                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <FormField control={form.control} name="qcEndLabelDetails.dateOfMfg" render={({ field }) => (
                                     <FormItem className="flex flex-col"><FormLabel>Date of Mfg</FormLabel>
                                       <Popover>
@@ -652,8 +652,6 @@ export default function LogProductionPage() {
                               />
                           </div>
                         </div>
-                      </TabsContent>
-                   </Tabs>
                 </TabsContent>
 
                 {/* --- TAB 4: Packaging Used --- */}
