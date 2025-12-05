@@ -116,8 +116,8 @@ export default function UserManagementPage() {
       if (!deletingUser || !firestore) return;
       
       try {
-        await deleteDoc(doc(firestore, COLLECTIONS.USERS, deletingUser.id));
-        await logAdminActivity(`Deleted user: ${deletingUser.name}`);
+        await deleteDoc(doc(firestore, COLLECTIONS.USERS, deletingUser.uid));;
+        await logAdminActivity(`Deleted user: ${deletingUser.displayName || deletingUser.name}`);
         toast({ title: 'User deleted successfully' });
         setDeletingUser(null);
       } catch (error) {
@@ -166,16 +166,16 @@ export default function UserManagementPage() {
                 <TableBody>
                   {users && users.length > 0 ? (
                     users.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow key={user.uid}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.photoURL || ''} alt={user.name || ''} />
+                              <AvatarImage src={user.photoURL || ''} alt={user.displayName || user.name || ''} />
                               <AvatarFallback>
-                                {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                                {(user.displayName || user.name)?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{user.name}</span>
+                            <span>{user.displayName || user.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
@@ -262,11 +262,11 @@ function EditUserDialog({
     
     setIsUpdating(true);
     try {
-      await updateDoc(doc(firestore, COLLECTIONS.USERS, user.id), {
+      await updateDoc(doc(firestore, COLLECTIONS.USERS, user.uid), {
         role: values.role,
       });
       
-      await onUserUpdated(`Updated role for ${user.name} to ${values.role}`);
+      await onUserUpdated(`Updated role for ${user.displayName || user.name} to ${values.role}`);
       toast({ title: 'User role updated successfully' });
       onOpenChange(false);
     } catch (error) {
@@ -287,7 +287,7 @@ function EditUserDialog({
         <DialogHeader>
           <DialogTitle>Edit User Role</DialogTitle>
           <DialogDescription>
-            Change the role for {user?.name}
+            Change the role for {user?.displayName || user?.name}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -348,7 +348,7 @@ function DeleteUserAlert({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete the user account for {user?.name}. This action cannot be undone.
+            This will permanently delete the user account for {user?.displayName || user?.name}. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
