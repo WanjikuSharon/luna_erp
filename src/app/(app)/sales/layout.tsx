@@ -17,6 +17,11 @@ import { cn } from '@/lib/utils';
 // Define the navigation items for the Sales sidebar
 const sidebarNavItems = [
   {
+    title: 'Products Inventory',
+    href: '/inventory/products',
+    icon: Package,
+  },
+  {
     title: 'Sales Dashboard', // Maina's dashboard
     href: '/sales/dashboard',
     icon: Users,
@@ -34,7 +39,7 @@ const sidebarNavItems = [
   {
     title: 'Van Stock Inventory', // NEW: Van stock view
     href: '/sales/van-stock',
-    icon: Package,
+    icon: PackageCheck,
   },
   {
     title: 'Daily Sales Ledger', // Form from 1000497324.jpg
