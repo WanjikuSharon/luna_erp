@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, ClipboardCheck, ExternalLink, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -45,6 +46,11 @@ export default function QCIncomingPage() {
   const [selectedRequest, setSelectedRequest] = useState<MaterialRequest | null>(null);
   const [qcNotes, setQcNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // QC Checklist states
+  const [qcSealsOk, setQcSealsOk] = useState(false);
+  const [qcWeightOk, setQcWeightOk] = useState(false);
+  const [qcMaterialOk, setQcMaterialOk] = useState(false);
 
   // Fetch data
   const requestsRef = useMemoFirebase(() => collection(firestore, COLLECTIONS.REQUESTS), [firestore]);
@@ -288,7 +294,15 @@ export default function QCIncomingPage() {
       {/* QC Dialog */}
       <Dialog
         open={!!selectedRequest}
-        onOpenChange={(open) => !open && setSelectedRequest(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRequest(null);
+            setQcNotes('');
+            setQcSealsOk(false);
+            setQcWeightOk(false);
+            setQcMaterialOk(false);
+          }
+        }}
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
