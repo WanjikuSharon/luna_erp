@@ -86,7 +86,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         item.href === currentRoute && item.roles.includes(userData.role)
       );
 
-      if (!hasAccess && currentRoute !== '/login' && currentRoute !== '/profile' && currentRoute !== '/settings') {
+      // Allow access to shared routes like /inventory, /profile, /settings
+      const sharedRoutes = ['/inventory', '/login', '/profile', '/settings'];
+      const isSharedRoute = sharedRoutes.some(route => currentRoute === route);
+
+      if (!hasAccess && !isSharedRoute) {
         // Redirect to user's default dashboard
         const role = userData.role;
         
