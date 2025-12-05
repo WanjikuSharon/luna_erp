@@ -32,13 +32,13 @@ const sidebarNavItems = [
     icon: PackageOpen,
   },
   {
-    title: 'Stock In / Returns', // Form from 1000497323.jpg
-    href: '/sales/stock-in',
+    title: 'Van Stock Inventory', // NEW: Van stock view
+    href: '/sales/van-stock',
     icon: PackageCheck,
   },
   {
-    title: 'Van Stock Inventory', // NEW: Van stock view
-    href: '/sales/van-stock',
+    title: 'Stock In / Returns', // Form from 1000497323.jpg
+    href: '/sales/stock-in',
     icon: PackageCheck,
   },
   {
@@ -47,7 +47,7 @@ const sidebarNavItems = [
     icon: BookMarked,
   },
   {
-    title: 'eTIMS Setup', // KRA eTIMS integration setup
+    title: 'eTIMS', // KRA eTIMS integration
     href: '/sales/etims-setup',
     icon: FileCheck,
   },
