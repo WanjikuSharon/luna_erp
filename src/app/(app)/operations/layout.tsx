@@ -16,7 +16,7 @@ const sidebarNavItems = [
   },
   {
     title: 'Products Inventory',
-    href: '/inventory/products',
+    href: '/operations/products',
     icon: Package,
   },
   {
