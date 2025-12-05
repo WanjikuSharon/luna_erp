@@ -139,7 +139,24 @@ export default function OperationsDashboardPage() {
       {/* Inventory Overview */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Inventory Status</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Product Inventory</CardTitle>
+              <Package className="h-4 w-4 text-blue-700" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-blue-700">{dashboardStats.totalProducts}</div>
+                  <p className="text-xs text-blue-600">Total product types</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-red-200 bg-red-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-red-700">Critical Raw Materials</CardTitle>
