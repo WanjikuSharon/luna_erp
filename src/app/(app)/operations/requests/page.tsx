@@ -362,7 +362,12 @@ export default function RequestsPage() {
             </TabsContent>
 
             {allStatuses.map(status => {
-              const statusRequests = filteredRequests.filter(r => r.status === status);
+              // Special handling for different statuses:
+              // - qc_approved: show delivered requests where QC was approved
+              // - delivered: show delivered requests (can include both approved and those without QC tracking)
+              const statusRequests = status === 'qc_approved' 
+                ? filteredRequests.filter(r => r.status === 'delivered' && r.qcApproved === true)
+                : filteredRequests.filter(r => r.status === status);
               return (
                 <TabsContent key={status} value={status}>
                 {isLoading ? <RequestTableSkeleton /> : (
