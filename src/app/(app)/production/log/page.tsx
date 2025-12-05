@@ -502,37 +502,8 @@ export default function LogProductionPage() {
                 {/* --- TAB 3: Quality Control --- */}
                 <TabsContent value="qc" className="space-y-4">
                    <CardDescription>
-                      Log all quality control checks for raw materials and the final product.
+                      Log all quality control checks for the final product.
                    </CardDescription>
-                   <Tabs defaultValue="rawMaterial" className="w-full">
-                      <TabsList>
-                        <TabsTrigger value="rawMaterial">Raw Material QC</TabsTrigger>
-                        <TabsTrigger value="endProduct">End Product QC</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="rawMaterial" className="pt-4 space-y-4">
-                        <FormField control={form.control} name="qcRawSealsOk" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal">No broken seals</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                         <FormField control={form.control} name="qcRawWeightOk" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal">Weight matches requested quantity</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                         <FormField control={form.control} name="qcRawMaterialOk" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal">Correct material type as ordered</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      </TabsContent>
-                      <TabsContent value="endProduct" className="pt-4">
                         <div className="space-y-6">
                           <div className="border p-4 rounded-md space-y-4">
                             <h4 className="font-semibold">Label Details & Yield</h4>

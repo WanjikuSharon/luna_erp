@@ -213,12 +213,6 @@ export default function ProductionRawMaterialsPage() {
           </div>
         </TableCell>
         <TableCell>{getStockBadge(stockLevel)}</TableCell>
-        <TableCell>
-          <Button size="sm" variant="outline" onClick={() => setUseMaterial(material)}>
-            <Minus className="h-4 w-4 mr-1" />
-            Use Material
-          </Button>
-        </TableCell>
       </TableRow>
     );
   };
@@ -344,13 +338,12 @@ export default function ProductionRawMaterialsPage() {
                         <TableHead>Material</TableHead>
                         <TableHead>Stock Level</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {materials.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                             No materials found
                           </TableCell>
                         </TableRow>
