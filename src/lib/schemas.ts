@@ -299,6 +299,7 @@ export const qcEndLabelDetailsSchema = z.object({
 export const productionBatchSchema = z.object({
   productId: z.string().min(1, 'Please select a product'),
   dateOfMfg: z.date({ required_error: 'Date of manufacture is required' }),
+  expiryDate: z.date({ required_error: 'Expiry date is required' }),
   batchNumber: z.string().min(1, 'Batch number is required'),
   batchSize: z.coerce.number().min(1, 'Batch size must be at least 1'),
   mfRef: z.string().optional(),
