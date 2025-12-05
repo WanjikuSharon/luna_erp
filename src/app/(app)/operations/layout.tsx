@@ -15,6 +15,11 @@ const sidebarNavItems = [
     icon: LayoutDashboard,
   },
   {
+    title: 'Products Inventory',
+    href: '/inventory/products',
+    icon: Package,
+  },
+  {
     title: 'Raw Materials Stock',
     href: '/operations/raw-materials',
     icon: Warehouse,
@@ -27,7 +32,7 @@ const sidebarNavItems = [
   {
     title: 'Packaging', // <-- ADD THIS
     href: '/operations/packaging',
-    icon: Package, // <-- USE NEW ICON
+    icon: PackageSearch, // <-- USE NEW ICON
   },
   {
     title: 'Requests List', // RENAMED
