@@ -3,12 +3,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Factory, FileText, List, Warehouse, ClipboardCheck } from 'lucide-react'; // Import the icons we need
+import { Factory, FileText, List, Warehouse, ClipboardCheck, Package } from 'lucide-react'; // Import the icons we need
 
 import { cn } from '@/lib/utils';
 
 // NEW: Cleaned-up sidebar navigation
 const sidebarNavItems = [
+  {
+    title: 'Products Inventory',
+    href: '/inventory/products',
+    icon: Package,
+  },
   {
     title: 'Incoming Materials QC',
     href: '/production/qc-incoming',
