@@ -276,6 +276,9 @@ export default function QCIncomingPage() {
                           onClick={() => {
                             setSelectedRequest(request);
                             setQcNotes('');
+                            setQcSealsOk(false);
+                            setQcWeightOk(false);
+                            setQcMaterialOk(false);
                           }}
                         >
                           <ClipboardCheck className="h-4 w-4 mr-1" />
@@ -348,6 +351,43 @@ export default function QCIncomingPage() {
                   ) : (
                     <p className="text-sm text-muted-foreground">No document</p>
                   )}
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
+                <h4 className="font-semibold text-sm">Raw Material QC Checklist</h4>
+                
+                <div className="flex items-center space-x-3 space-y-0 rounded-md border bg-background p-3">
+                  <Checkbox
+                    id="qc-seals"
+                    checked={qcSealsOk}
+                    onCheckedChange={(checked) => setQcSealsOk(checked === true)}
+                  />
+                  <Label htmlFor="qc-seals" className="font-normal cursor-pointer">
+                    No broken seals
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3 space-y-0 rounded-md border bg-background p-3">
+                  <Checkbox
+                    id="qc-weight"
+                    checked={qcWeightOk}
+                    onCheckedChange={(checked) => setQcWeightOk(checked === true)}
+                  />
+                  <Label htmlFor="qc-weight" className="font-normal cursor-pointer">
+                    Weight matches requested quantity
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3 space-y-0 rounded-md border bg-background p-3">
+                  <Checkbox
+                    id="qc-material"
+                    checked={qcMaterialOk}
+                    onCheckedChange={(checked) => setQcMaterialOk(checked === true)}
+                  />
+                  <Label htmlFor="qc-material" className="font-normal cursor-pointer">
+                    Correct material type as ordered
+                  </Label>
                 </div>
               </div>
 
