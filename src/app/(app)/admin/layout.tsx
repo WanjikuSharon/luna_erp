@@ -25,7 +25,7 @@ const adminNavItems = [
   },
   {
     title: 'Products Inventory',
-    href: '/inventory/products',
+    href: '/admin/products',
     icon: Package,
     description: 'View all products inventory',
   },
