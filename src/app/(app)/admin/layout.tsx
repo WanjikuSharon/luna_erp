@@ -13,7 +13,9 @@ import {
   Shield,
   FileText,
   Database,
-  Package
+  Package,
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -22,6 +24,12 @@ const adminNavItems = [
     href: '/admin',
     icon: LayoutDashboard,
     description: 'Overview, users, analytics',
+  },
+  {
+    title: 'User Management',
+    href: '/admin/users',
+    icon: Users,
+    description: 'Manage system users',
   },
   {
     title: 'Products Inventory',
@@ -34,6 +42,24 @@ const adminNavItems = [
     href: '/admin/approvals',
     icon: ClipboardCheck,
     description: 'Approve material requests',
+  },
+  {
+    title: 'Daily Sales Reports',
+    href: '/admin/sales-reports',
+    icon: FileText,
+    description: 'View daily sales reports',
+  },
+  {
+    title: 'Security Alerts',
+    href: '/admin/security',
+    icon: AlertTriangle,
+    description: 'Monitor security events',
+  },
+  {
+    title: 'Data Backup & Export',
+    href: '/admin/backup',
+    icon: Download,
+    description: 'Backup and export data',
   },
 ];
 
