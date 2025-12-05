@@ -12,7 +12,8 @@ import {
   Settings, 
   Shield,
   FileText,
-  Database
+  Database,
+  Package
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -21,6 +22,12 @@ const adminNavItems = [
     href: '/admin',
     icon: LayoutDashboard,
     description: 'Overview, users, analytics',
+  },
+  {
+    title: 'Products Inventory',
+    href: '/inventory/products',
+    icon: Package,
+    description: 'View all products inventory',
   },
   {
     title: 'Request Approvals',
