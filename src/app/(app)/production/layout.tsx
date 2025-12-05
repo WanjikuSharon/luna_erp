@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 const sidebarNavItems = [
   {
     title: 'Products Inventory',
-    href: '/inventory/products',
+    href: '/production/products',
     icon: Package,
   },
   {
