@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, where, limit } from 'firebase/firestore';
-import type { Product, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
+import type { Product, ProductionBatch, DailySalesReport } from '@/lib/types';
 import { COLLECTIONS } from '@/services/inventory_service';
 import {
   Card,
@@ -89,13 +89,13 @@ export default function ProductsInventoryPage() {
   // Fetch sales ledger entries (last 30 days for analytics)
   const salesRef = useMemoFirebase(
     () => query(
-      collection(firestore, 'daily_sales_ledger'),
+      collection(firestore, 'daily_sales_records'),
       orderBy('date', 'desc'),
       limit(100)
     ),
     [firestore]
   );
-  const { data: salesEntries, isLoading: loadingSales } = useCollection<DailySalesLedgerEntry>(salesRef);
+  const { data: salesReports, isLoading: loadingSales } = useCollection<DailySalesReport>(salesRef);
 
   const isLoading = loadingProducts || loadingBatches || loadingSales;
 
@@ -113,20 +113,21 @@ export default function ProductsInventoryPage() {
   // Calculate sales totals by product
   const salesByProduct = useMemo(() => {
     const map: Record<string, { sold: number, returned: number, revenue: number }> = {};
-    salesEntries?.forEach(entry => {
-      entry.entries?.forEach(item => {
+    salesReports?.forEach(report => {
+      report.records?.forEach(item => {
         if (item.productId) {
           if (!map[item.productId]) {
             map[item.productId] = { sold: 0, returned: 0, revenue: 0 };
           }
           map[item.productId].sold += item.qtySold || 0;
           map[item.productId].returned += item.qtyReturned || 0;
-          map[item.productId].revenue += (item.qtySold || 0) * (item.unitPrice || 0);
+          // Revenue calculation - we'll need to get price from the product
+          // For now, we'll track quantity only and calculate revenue when rendering
         }
       });
     });
     return map;
-  }, [salesEntries]);
+  }, [salesReports]);
 
   // Enhanced product data with analytics
   const enrichedProducts = useMemo(() => {
@@ -135,12 +136,17 @@ export default function ProductsInventoryPage() {
       const sales = salesByProduct[product.id] || { sold: 0, returned: 0, revenue: 0 };
       const stockLevel = getStockLevel(product.quantity);
       const inventoryValue = product.quantity * product.price;
+      // Calculate revenue using product price
+      const revenue = sales.sold * product.price;
       const turnoverRate = production > 0 ? (sales.sold / production) * 100 : 0;
 
       return {
         ...product,
         production,
-        sales,
+        sales: {
+          ...sales,
+          revenue, // Override with calculated revenue
+        },
         stockLevel,
         inventoryValue,
         turnoverRate,
