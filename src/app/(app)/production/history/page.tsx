@@ -53,9 +53,9 @@ export default function ProductionHistoryPage() {
     <>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Production & QC History</h1>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Batch & Production Report</h1>
           <p className="text-muted-foreground">
-            A complete log of all manufactured batches and their quality control reports.
+            A complete log of all manufactured batches and their production reports.
           </p>
         </div>
         <Card>
@@ -102,7 +102,7 @@ export default function ProductionHistoryPage() {
                       <TableCell>{batch.qcEndProductAnalysis.labelDetails.analysedBy}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => setSelectedBatch(batch)}>
-                          View QC Report
+                          View Output Report
                         </Button>
                       </TableCell>
                     </TableRow>

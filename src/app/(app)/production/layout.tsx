@@ -25,7 +25,7 @@ const sidebarNavItems = [
     icon: Factory,
   },
   {
-    title: 'Batch & QC History', // This is the "QC Reports" page
+    title: 'Batch & Production Report', // This is the "Production Reports" page
     href: '/production/history', 
     icon: FileText,
   },
