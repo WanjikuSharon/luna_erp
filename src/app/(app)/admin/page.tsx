@@ -28,8 +28,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { SecurityAlertsCard } from '@/components/admin/SecurityAlertsCard';
-import { BackupManagementCard } from '@/components/admin/BackupManagementCard';
+
 // UPDATED: Import DailySalesReport and ProductionBatch
 import type { User, Activity, DailySalesReport, ProductionBatch, DailySalesLedgerEntry } from '@/lib/types';
 import { MoreHorizontal, User as UserIcon, Activity as ActivityIcon, AlertTriangle, ShieldCheck, Loader2, FileText, DollarSign } from 'lucide-react';
@@ -87,11 +86,6 @@ import { ACTIVITY_COLLECTIONS, createActivityQuery } from '@/lib/activity-utils'
 import { TableSkeleton, CardSkeleton } from '@/components/skeletons';
 
 // Dynamic imports for heavy components
-const DailySalesReportSheet = dynamic(
-  () => import('@/components/reports/DailySalesReportSheet').then(mod => ({ default: mod.DailySalesReportSheet })),
-  { loading: () => <CardSkeleton /> }
-);
-
 const CombinedActivityLog = dynamic(
   () => import('@/components/CombinedActivityLog').then(mod => ({ default: mod.CombinedActivityLog })),
   { loading: () => <TableSkeleton rows={10} /> }
@@ -479,12 +473,6 @@ export default function AdminDashboardPage() {
             />
           </CardContent>
         </Card>
-
-        {/* --- NEW: Security Alerts Card --- */}
-        <SecurityAlertsCard />
-
-        {/* --- NEW: Backup Management Card --- */}
-        <BackupManagementCard />
     </div>
 
     {/* --- Dialogs for User Management (Unchanged) --- */}
@@ -497,12 +485,6 @@ export default function AdminDashboardPage() {
       user={deletingUser}
       onOpenChange={() => setDeletingUser(null)}
       onDelete={handleDeleteUser}
-    />
-
-    {/* --- NEW: Dialog for Sales Report --- */}
-    <DailySalesReportSheet
-      report={viewingReport}
-      onOpenChange={() => setViewingReport(null)}
     />
     </> 
   );
