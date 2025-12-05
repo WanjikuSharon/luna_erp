@@ -43,8 +43,9 @@ export default function DailySalesReportsPage() {
     
     const [viewingReport, setViewingReport] = useState<DailySalesReport | null>(null);
 
-    const totalRevenue = salesReports?.reduce((sum, report) => {
-      const reportTotal = report.records?.reduce((rSum, record) => rSum + (record.totalAmount || 0), 0) || 0;
+    // Calculate total items sold across all reports
+    const totalItemsSold = salesReports?.reduce((sum, report) => {
+      const reportTotal = report.records?.reduce((rSum, record) => rSum + (record.qtySold || 0), 0) || 0;
       return sum + reportTotal;
     }, 0) || 0;
 
@@ -71,11 +72,11 @@ export default function DailySalesReportsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Items Sold</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Ksh {totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{totalItemsSold.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">From all recorded sales</p>
             </CardContent>
           </Card>
@@ -100,8 +101,8 @@ export default function DailySalesReportsPage() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Sales Person</TableHead>
-                    <TableHead>Items Sold</TableHead>
-                    <TableHead>Total Amount</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Units Sold</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -109,7 +110,7 @@ export default function DailySalesReportsPage() {
                 <TableBody>
                   {salesReports && salesReports.length > 0 ? (
                     salesReports.map((report) => {
-                      const totalAmount = report.records?.reduce((sum, record) => sum + (record.totalAmount || 0), 0) || 0;
+                      const totalSold = report.records?.reduce((sum, record) => sum + (record.qtySold || 0), 0) || 0;
                       const itemCount = report.records?.length || 0;
                       
                       return (
@@ -117,12 +118,12 @@ export default function DailySalesReportsPage() {
                           <TableCell className="font-medium">
                             {report.date ? format(report.date.toDate(), 'PPP') : 'N/A'}
                           </TableCell>
-                          <TableCell>{report.salesPersonName || 'N/A'}</TableCell>
+                          <TableCell>{report.salespersonName || 'N/A'}</TableCell>
                           <TableCell>{itemCount} items</TableCell>
-                          <TableCell>Ksh {totalAmount.toLocaleString()}</TableCell>
+                          <TableCell>{totalSold} units sold</TableCell>
                           <TableCell>
-                            <Badge variant={report.submitted ? 'default' : 'secondary'}>
-                              {report.submitted ? 'Submitted' : 'Draft'}
+                            <Badge variant={report.records && report.records.length > 0 ? 'default' : 'secondary'}>
+                              {report.records && report.records.length > 0 ? 'Submitted' : 'Draft'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
