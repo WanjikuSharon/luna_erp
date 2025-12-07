@@ -68,7 +68,9 @@ export function EtimsProductRegistration() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        const errorDetails = data.details ? `: ${JSON.stringify(data.details)}` : '';
+        const errorHint = data.hint ? `\n${data.hint}` : '';
+        throw new Error(`${data.error || 'Registration failed'}${errorDetails}${errorHint}`);
       }
 
       setRegistrationResults({
