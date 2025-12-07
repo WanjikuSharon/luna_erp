@@ -29,17 +29,19 @@ async function fetchCodes() {
       body: JSON.stringify({
         tin: CONFIG.tin,
         bhfId: CONFIG.bhfId,
-        cdCls: '14', // 14 = Packaging Unit Code
-        cdClsNm: ''
+        lastReqDt: '20200101000000',
+        cdCls: '14' // 14 = Packaging Unit Code
       })
     });
 
     const data = await response.json();
+    console.log('Response:', JSON.stringify(data, null, 2).substring(0, 1000));
     
     if (data.resultCd === '000') {
-      console.log('✅ Packaging Unit Codes:\n');
-      data.data.itemClsList?.forEach((code: any) => {
-        console.log(`  ${code.cd} - ${code.cdNm}`);
+      console.log('\n✅ Packaging Unit Codes:\n');
+      const codes = data.data?.cdList || data.data?.itemClsList || [];
+      codes.forEach((code: any) => {
+        console.log(`  ${code.cd} - ${code.cdNm || code.name}`);
       });
     } else {
       console.log('Error:', data.resultMsg);
@@ -59,8 +61,8 @@ async function fetchCodes() {
       body: JSON.stringify({
         tin: CONFIG.tin,
         bhfId: CONFIG.bhfId,
-        cdCls: '13', // 13 = Quantity Unit Code
-        cdClsNm: ''
+        lastReqDt: '20200101000000',
+        cdCls: '13' // 13 = Quantity Unit Code
       })
     });
 
@@ -68,8 +70,9 @@ async function fetchCodes() {
     
     if (data2.resultCd === '000') {
       console.log('✅ Quantity Unit Codes:\n');
-      data2.data.itemClsList?.forEach((code: any) => {
-        console.log(`  ${code.cd} - ${code.cdNm}`);
+      const codes2 = data2.data?.cdList || data2.data?.itemClsList || [];
+      codes2.forEach((code: any) => {
+        console.log(`  ${code.cd} - ${code.cdNm || code.name}`);
       });
     }
 
