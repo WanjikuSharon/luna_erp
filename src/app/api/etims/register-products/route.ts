@@ -29,6 +29,22 @@ export async function POST(request: NextRequest) {
 
     logger.info(`Registering ${products.length} products with eTIMS`);
 
+    // Validate eTIMS configuration
+    const { validateEtimsConfig } = await import('@/services/etims_service');
+    const validation = validateEtimsConfig();
+    
+    if (!validation.valid) {
+      logger.error('eTIMS configuration invalid:', validation.errors);
+      return NextResponse.json(
+        { 
+          error: 'eTIMS not configured',
+          details: validation.errors,
+          hint: 'Please add eTIMS credentials to environment variables in Vercel'
+        },
+        { status: 500 }
+      );
+    }
+
     // Transform products to eTIMS format
     const etimsProducts: EtimsProductRegistration[] = products.map((p: any) => ({
       itemCode: p.sku || p.id,
