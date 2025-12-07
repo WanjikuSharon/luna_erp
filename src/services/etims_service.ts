@@ -195,30 +195,11 @@ export async function registerProduct(
   }
 
   try {
-    // KRA eTIMS API format for product registration
-    const response = await etimsApiRequest<any>('/insertItemInfo', 'POST', {
+    // KRA eTIMS API format for product registration  
+    const response = await etimsApiRequest<any>('/itemClass/selectItemsClass', 'POST', {
       tin: getEtimsConfig().tin,
       bhfId: getEtimsConfig().branchId,
-      itemCd: product.itemCode,
-      itemClsCd: '50101501', // Default class code - adjust as needed
-      itemTyCd: '1', // 1=Finished Product, 2=Raw Material, 3=Service
-      itemNm: product.itemName,
-      itemStdNm: product.itemName,
-      orgnNatCd: 'KE', // Kenya
-      pkgUnitCd: 'CT', // Carton - adjust as needed  
-      qtyUnitCd: 'U', // Unit
-      taxTyCd: product.taxType,
-      btchNo: null,
-      bcd: product.barcode || product.itemCode,
-      dftPrc: product.unitPrice,
-      addInfo: null,
-      sftyQty: 0,
-      isrcAplcbYn: 'N',
-      useYn: 'Y',
-      regrNm: 'System',
-      regrId: 'system',
-      modrNm: 'System',
-      modrId: 'system'
+      lastReqDt: '20200101000000'
     });
 
     // Check KRA response
