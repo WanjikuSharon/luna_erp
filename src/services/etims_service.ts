@@ -73,9 +73,9 @@ export type EtimsProductRegistration = {
   itemCode: string; // Your product SKU
   itemName: string;
   barcode?: string;
-  taxType: 'A' | 'B' | 'C' | 'D'; // A=VAT Standard (16%), B=VAT Zero, C=Exempt, D=Special
+  taxType: 'A' | 'B' | 'C' | 'D'; // A=Exempt, B=VAT 16%, C=Zero Rated, D=Special
   unitPrice: number;
-  packagingUnit: 'PC' | 'BX' | 'CT' | 'DOZ' | 'KG' | 'L'; // Piece, Box, Carton, Dozen, Kilogram, Liter
+  packagingUnit: 'NT' | 'PC' | 'BX' | 'CT' | 'DOZ' | 'KG' | 'L'; // NT=Net, PC=Piece, BX=Box, CT=Carton, DOZ=Dozen, KG=Kilogram, L=Liter
 };
 
 // ============================================
