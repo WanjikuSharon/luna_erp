@@ -69,25 +69,33 @@ export async function POST(request: NextRequest) {
       );
     }
     const db = getFirestore(adminApp);
-    const batch = db.batch();
 
-    for (const itemCode of result.succeeded) {
+    // Update each product individually with set merge to create if not exists
+    const updatePromises = result.succeeded.map(async (itemCode) => {
       const productRef = db.collection('products').doc(itemCode);
-      batch.update(productRef, {
-        etimsRegistered: true,
-        etimsRegisteredAt: new Date(),
-      });
-    }
+      try {
+        await productRef.set({
+          etimsRegistered: true,
+          etimsRegisteredAt: new Date(),
+        }, { merge: true });
+      } catch (error) {
+        logger.warn(`Failed to update product ${itemCode}:`, error);
+      }
+    });
 
-    for (const failed of result.failed) {
+    const failedUpdatePromises = result.failed.map(async (failed) => {
       const productRef = db.collection('products').doc(failed.itemCode);
-      batch.update(productRef, {
-        etimsRegistered: false,
-        etimsRegistrationError: failed.error,
-      });
-    }
+      try {
+        await productRef.set({
+          etimsRegistered: false,
+          etimsRegistrationError: failed.error,
+        }, { merge: true });
+      } catch (error) {
+        logger.warn(`Failed to update product ${failed.itemCode}:`, error);
+      }
+    });
 
-    await batch.commit();
+    await Promise.all([...updatePromises, ...failedUpdatePromises]);
 
     return NextResponse.json({
       success: true,
