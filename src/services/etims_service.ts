@@ -136,21 +136,29 @@ async function etimsApiRequest<T>(
   
   try {
     logger.info(`Making ${method} request to eTIMS: ${url}`);
-    logger.info('Request body:', JSON.stringify(body, null, 2));
+    
+    const requestBody = body ? {
+      ...body,
+      tin: config.tin,
+      bhfId: config.branchId,
+    } : undefined;
+    
+    logger.info('Request body:', JSON.stringify(requestBody, null, 2));
     
     const response = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
+        'tin': config.tin,
+        'bhfId': config.branchId,
+        'cmcKey': config.apiSecret,
       },
-      body: body ? JSON.stringify({
-        ...body,
-        cmcKey: config.apiSecret, // Add the communication key from initialization
-      }) : undefined,
+      body: requestBody ? JSON.stringify(requestBody) : undefined,
     });
 
     const responseText = await response.text();
-    logger.info('Response text:', responseText);
+    logger.info('Response status:', response.status);
+    logger.info('Response text:', responseText.substring(0, 500));
 
     let data;
     try {
@@ -158,11 +166,6 @@ async function etimsApiRequest<T>(
     } catch (e) {
       logger.error('Failed to parse response as JSON:', responseText.substring(0, 200));
       throw new Error(`Invalid API response: ${responseText.substring(0, 100)}`);
-    }
-
-    if (!response.ok) {
-      logger.error('eTIMS API error:', data);
-      throw new Error(data.resultMsg || data.message || `eTIMS API request failed: ${response.status}`);
     }
 
     logger.info('eTIMS API response:', data);
@@ -195,11 +198,26 @@ export async function registerProduct(
   }
 
   try {
-    // KRA eTIMS API format for product registration  
-    const response = await etimsApiRequest<any>('/itemClass/selectItemsClass', 'POST', {
-      tin: getEtimsConfig().tin,
-      bhfId: getEtimsConfig().branchId,
-      lastReqDt: '20200101000000'
+    // KRA eTIMS API format for product registration
+    const response = await etimsApiRequest<any>('/saveItem', 'POST', {
+      itemCd: product.itemCode,
+      itemClsCd: '50101501', // Default HS Code - should be fetched from /selectItemClsList
+      itemTyCd: '2', // 2=Finished Product
+      itemNm: product.itemName,
+      itemStdNm: product.itemName,
+      orgnNatCd: 'KE', // Kenya
+      pkgUnitCd: 'PC', // Piece
+      qtyUnitCd: 'U', // Unit
+      taxTyCd: product.taxType, // A=16% VAT
+      btchNo: null,
+      bcd: product.barcode || null,
+      dftPrc: product.unitPrice,
+      isrcAplcbYn: 'N',
+      useYn: 'Y',
+      regrId: 'System',
+      regrNm: 'Luna ERP System',
+      modrId: 'System',
+      modrNm: 'Luna ERP System'
     });
 
     // Check KRA response
