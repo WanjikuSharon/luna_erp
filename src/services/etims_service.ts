@@ -124,36 +124,6 @@ export function validateEtimsConfig(): { valid: boolean; errors: string[] } {
 // ============================================
 
 /**
- * Generate authentication header for eTIMS API requests
- * This uses HMAC-SHA256 signature as per KRA requirements
- */
-async function generateAuthHeader(
-  config: EtimsConfig,
-  endpoint: string,
-  body: any
-): Promise<{ [key: string]: string }> {
-  const timestamp = new Date().toISOString();
-  const nonce = Math.random().toString(36).substring(2, 15);
-  
-  // Import crypto for HMAC signature
-  const crypto = await import('crypto-js');
-  
-  // Create signature: HMAC-SHA256(apiSecret, timestamp + nonce + endpoint + body)
-  const payload = timestamp + nonce + endpoint + JSON.stringify(body);
-  const signature = crypto.HmacSHA256(payload, config.apiSecret).toString();
-
-  return {
-    'Content-Type': 'application/json',
-    'X-ETIMS-API-KEY': config.apiKey,
-    'X-ETIMS-TIMESTAMP': timestamp,
-    'X-ETIMS-NONCE': nonce,
-    'X-ETIMS-SIGNATURE': signature,
-    'X-ETIMS-TIN': config.tin,
-    'X-ETIMS-DEVICE-SERIAL': config.deviceSerialNumber,
-  };
-}
-
-/**
  * Make a request to the eTIMS API
  */
 async function etimsApiRequest<T>(
@@ -165,21 +135,34 @@ async function etimsApiRequest<T>(
   const url = `${config.apiUrl}${endpoint}`;
   
   try {
-    const headers = await generateAuthHeader(config, endpoint, body || {});
-    
-    logger.info(`Making ${method} request to eTIMS: ${endpoint}`);
+    logger.info(`Making ${method} request to eTIMS: ${url}`);
+    logger.info('Request body:', JSON.stringify(body, null, 2));
     
     const response = await fetch(url, {
       method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify({
+        ...body,
+        cmcKey: config.apiSecret, // Add the communication key from initialization
+      }) : undefined,
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    logger.info('Response text:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      logger.error('Failed to parse response as JSON:', responseText.substring(0, 200));
+      throw new Error(`Invalid API response: ${responseText.substring(0, 100)}`);
+    }
 
     if (!response.ok) {
       logger.error('eTIMS API error:', data);
-      throw new Error(data.message || `eTIMS API request failed: ${response.status}`);
+      throw new Error(data.resultMsg || data.message || `eTIMS API request failed: ${response.status}`);
     }
 
     logger.info('eTIMS API response:', data);
@@ -212,19 +195,45 @@ export async function registerProduct(
   }
 
   try {
-    const response = await etimsApiRequest<any>('/v1/items/register', 'POST', {
-      itemCode: product.itemCode,
-      itemName: product.itemName,
-      barcode: product.barcode || product.itemCode,
-      taxType: product.taxType,
-      unitPrice: product.unitPrice,
-      packagingUnit: product.packagingUnit,
+    // KRA eTIMS API format for product registration
+    const response = await etimsApiRequest<any>('/insertItemInfo', 'POST', {
+      tin: getEtimsConfig().tin,
+      bhfId: getEtimsConfig().branchId,
+      itemCd: product.itemCode,
+      itemClsCd: '50101501', // Default class code - adjust as needed
+      itemTyCd: '1', // 1=Finished Product, 2=Raw Material, 3=Service
+      itemNm: product.itemName,
+      itemStdNm: product.itemName,
+      orgnNatCd: 'KE', // Kenya
+      pkgUnitCd: 'CT', // Carton - adjust as needed  
+      qtyUnitCd: 'U', // Unit
+      taxTyCd: product.taxType,
+      btchNo: null,
+      bcd: product.barcode || product.itemCode,
+      dftPrc: product.unitPrice,
+      addInfo: null,
+      sftyQty: 0,
+      isrcAplcbYn: 'N',
+      useYn: 'Y',
+      regrNm: 'System',
+      regrId: 'system',
+      modrNm: 'System',
+      modrId: 'system'
     });
 
-    return {
-      success: true,
-      itemCode: product.itemCode,
-    };
+    // Check KRA response
+    if (response.resultCd === '000') {
+      return {
+        success: true,
+        itemCode: product.itemCode,
+      };
+    } else {
+      return {
+        success: false,
+        itemCode: product.itemCode,
+        error: response.resultMsg || 'Registration failed',
+      };
+    }
   } catch (error: any) {
     logger.error(`Failed to register product ${product.itemCode}:`, error);
     return {
