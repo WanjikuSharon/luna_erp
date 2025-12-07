@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
       itemCode: p.sku || p.id,
       itemName: p.name,
       barcode: p.barcode || p.sku || p.id,
-      taxType: 'A', // VAT Standard (16%) - adjust as needed
+      taxType: 'B', // B = VAT 16%
       unitPrice: p.unitPrice || 0,
-      packagingUnit: 'PC', // Piece - adjust as needed
+      packagingUnit: 'NT', // NT = Net
     }));
 
     const result = await registerProducts(etimsProducts);

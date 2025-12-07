@@ -206,9 +206,9 @@ export async function registerProduct(
       itemNm: product.itemName,
       itemStdNm: product.itemName,
       orgnNatCd: 'KE', // Kenya
-      pkgUnitCd: 'PC', // Piece
-      qtyUnitCd: 'U', // Unit
-      taxTyCd: product.taxType, // A=16% VAT
+      pkgUnitCd: 'NT', // NT=Net (valid code for OSCU)
+      qtyUnitCd: 'U', // U=Unit
+      taxTyCd: product.taxType, // B=16% VAT (A=Exempt, B=16%, C=Zero Rated)
       btchNo: null,
       bcd: product.barcode || null,
       dftPrc: product.unitPrice,
