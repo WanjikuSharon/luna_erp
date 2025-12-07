@@ -12,7 +12,7 @@ const CONFIG = {
   baseUrl: 'https://etims-api-sbx.kra.go.ke/etims-api/selectInitOsdcInfo',
   tin: 'P052454082G',          // Your KRA PIN
   branchId: '00',              // Your branch ID
-  dvcSrlNo: 'P052454082G'      // Using TIN as serial number
+  dvcSrlNo: 'LUNA_19_2025'      // Using
 };
 
 async function initializeDevice() {
