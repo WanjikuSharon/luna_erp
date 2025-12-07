@@ -22,11 +22,11 @@ async function testConnection() {
   console.log('\n');
 
   try {
-    // Test 1: Simple item class list request
-    console.log('📋 Test 1: Fetching item classifications...');
-    const url = `${CONFIG.apiUrl}/selectItemClsList`;
+    // Test 1: Verify connection
+    console.log('📋 Test 1: Verifying connection...');
+    let url = `${CONFIG.apiUrl}/selectItemClsList`;
     
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,16 +42,56 @@ async function testConnection() {
     });
 
     console.log('Response Status:', response.status);
-    const text = await response.text();
-    console.log('Response:', text.substring(0, 500));
+    let text = await response.text();
+    console.log('Response:', text.substring(0, 200));
+    console.log('\n');
+
+    // Test 2: Try saving a test item
+    console.log('📦 Test 2: Attempting to register a test product...');
+    url = `${CONFIG.apiUrl}/saveItem`;
+    
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'tin': CONFIG.tin,
+        'bhfId': CONFIG.bhfId,
+        'cmcKey': CONFIG.cmcKey,
+      },
+      body: JSON.stringify({
+        tin: CONFIG.tin,
+        bhfId: CONFIG.bhfId,
+        itemCd: 'TEST-001',
+        itemClsCd: '50101501',
+        itemTyCd: '2',
+        itemNm: 'Test Product',
+        itemStdNm: 'Test Product',
+        orgnNatCd: 'KE',
+        pkgUnitCd: 'PC',
+        qtyUnitCd: 'U',
+        taxTyCd: 'A',
+        btchNo: null,
+        bcd: null,
+        dftPrc: 100.00,
+        isrcAplcbYn: 'N',
+        useYn: 'Y',
+        regrId: 'System',
+        regrNm: 'Luna ERP System',
+        modrId: 'System',
+        modrNm: 'Luna ERP System'
+      })
+    });
+
+    console.log('Response Status:', response.status);
+    text = await response.text();
+    console.log('Response:', text);
     
     if (response.ok) {
       const data = JSON.parse(text);
       if (data.resultCd === '000') {
-        console.log('✅ Connection successful!');
-        console.log('Result:', data.resultMsg);
+        console.log('✅ Product registration successful!');
       } else {
-        console.log('❌ API returned error:', data.resultMsg);
+        console.log('❌ API returned error:', data.resultCd, data.resultMsg);
       }
     } else {
       console.log('❌ HTTP Error:', response.status);
